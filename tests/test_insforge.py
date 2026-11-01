@@ -1,5 +1,6 @@
 """InsForge REST client and the persistent price store (no network)."""
 
+import time
 import unittest
 from datetime import date, datetime, timedelta, timezone
 from unittest import mock
@@ -85,6 +86,15 @@ class InsForgeClientTests(unittest.TestCase):
         kwargs = self.http.request.call_args.kwargs
         self.assertEqual(kwargs["headers"]["Prefer"], "return=minimal,resolution=merge-duplicates")
         self.assertEqual(kwargs["params"], {"on_conflict": "ticker,day"})
+
+    def test_deadline_caps_the_timeout_and_rejects_expired_calls(self):
+        self.http.request.return_value = _response(body=[])
+        self.client.select("price_history", deadline=time.monotonic() + 2)
+        self.assertLessEqual(self.http.request.call_args.kwargs["timeout"], 2)
+        self.http.request.reset_mock()
+        with self.assertRaises(InsForgeError):
+            self.client.select("price_history", deadline=time.monotonic() - 1)
+        self.http.request.assert_not_called()
 
     def test_in_filter_quotes_values(self):
         self.assertEqual(in_filter(["GC=F", "^GSPC"]), 'in.("GC=F","^GSPC")')
@@ -192,6 +202,33 @@ class PriceStoreTests(unittest.TestCase):
                 mock.patch.object(market_data, "_download_prices_uncached", side_effect=self._download):
             prices = market_data.download_prices(("AAA",), self.start, self.end)
         self.assertEqual(list(prices.columns), ["AAA"])
+
+    def test_a_store_slower_than_the_budget_is_skipped_for_a_while(self):
+        price_store.configure(self.fake, budget_seconds=0.05)
+        real_select = self.fake.select
+
+        def slow_select(*args, **kwargs):
+            time.sleep(0.1)
+            return real_select(*args, **kwargs)
+
+        with mock.patch.object(self.fake, "select", side_effect=slow_select):
+            self.assertIsNone(self._fetch())
+        calls = len(self.fake.calls)
+        self.assertIsNone(self._fetch())
+        self.assertEqual(len(self.fake.calls), calls)
+        price_store.configure(self.fake)
+        self.assertIsNotNone(self._fetch())
+
+    def test_provider_downloads_do_not_use_up_the_budget(self):
+        price_store.configure(self.fake, budget_seconds=0.05)
+        download = self._download
+
+        def slow_download(*args):
+            time.sleep(0.1)
+            return download(*args)
+
+        self._download = slow_download
+        self.assertEqual(list(self._fetch().columns), ["AAA", "BBB"])
 
     def test_download_prices_uses_the_store(self):
         with mock.patch.object(market_data, "_download_prices_uncached", side_effect=self._download):

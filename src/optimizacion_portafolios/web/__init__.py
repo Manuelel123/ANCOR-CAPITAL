@@ -166,6 +166,9 @@ def _configure_price_store(testing: bool) -> None:
             os.environ.get("ATLAS_PRICE_INTRADAY_TTL_MINUTES")
             or price_store.DEFAULT_INTRADAY_TTL_MINUTES
         ),
+        budget_seconds=float(
+            os.environ.get("ATLAS_PRICE_STORE_BUDGET_SECONDS") or price_store.DEFAULT_BUDGET_SECONDS
+        ),
     )
 
 
