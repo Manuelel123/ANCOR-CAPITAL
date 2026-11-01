@@ -17,13 +17,18 @@ requested ticker, ``fetch`` picks the cheapest safe source:
 
 The tables are server-only: every call uses the project API key. The store is
 optional; without configuration, or on any InsForge failure, ``fetch`` returns
-``None`` and the caller downloads everything directly.
+``None`` and the caller downloads everything directly. The InsForge calls of
+one ``fetch`` share a time budget (provider downloads do not count): a store
+slower than the budget is a failure too, since a direct download is faster.
+After a failure the store is skipped for ``FAILURE_PAUSE_SECONDS``.
 """
 
 from __future__ import annotations
 
 import logging
+import time
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable
@@ -36,6 +41,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_FULL_REFRESH_DAYS = 7.0
 DEFAULT_INTRADAY_TTL_MINUTES = 60.0
+DEFAULT_BUDGET_SECONDS = 10.0
+FAILURE_PAUSE_SECONDS = 600.0
 # Calendar days re-downloaded before the stored end to detect re-adjustments.
 OVERLAP_DAYS = 7
 # Relative difference between a stored and a fresh close that signals a
@@ -48,22 +55,44 @@ Downloader = Callable[[tuple[str, ...], date, date], pd.DataFrame]
 _client: InsForgeClient | None = None
 _full_refresh = timedelta(days=DEFAULT_FULL_REFRESH_DAYS)
 _intraday_ttl = timedelta(minutes=DEFAULT_INTRADAY_TTL_MINUTES)
+_budget_seconds = DEFAULT_BUDGET_SECONDS
+# ``time.monotonic()`` until which the store is skipped after a failure.
+_paused_until = 0.0
 
 
 def configure(
     client: InsForgeClient | None,
     full_refresh_days: float = DEFAULT_FULL_REFRESH_DAYS,
     intraday_ttl_minutes: float = DEFAULT_INTRADAY_TTL_MINUTES,
+    budget_seconds: float = DEFAULT_BUDGET_SECONDS,
 ) -> None:
     """Enable the store with a client holding the API key (``None`` disables it)."""
-    global _client, _full_refresh, _intraday_ttl
+    global _client, _full_refresh, _intraday_ttl, _budget_seconds, _paused_until
     _client = client if client is not None and client.has_admin_key else None
     _full_refresh = timedelta(days=full_refresh_days)
     _intraday_ttl = timedelta(minutes=intraday_ttl_minutes)
+    _budget_seconds = budget_seconds
+    _paused_until = 0.0
 
 
 def enabled() -> bool:
     return _client is not None
+
+
+class _Deadline:
+    """Monotonic deadline for the InsForge calls of one ``fetch``."""
+
+    def __init__(self, seconds: float):
+        self.at = time.monotonic() + seconds
+
+    @contextmanager
+    def paused(self):
+        """Time spent inside (provider downloads) does not use up the budget."""
+        started = time.monotonic()
+        try:
+            yield
+        finally:
+            self.at += time.monotonic() - started
 
 
 @dataclass(frozen=True)
@@ -79,7 +108,7 @@ def _timestamp(value: str) -> datetime:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def _coverage(tickers: tuple[str, ...]) -> dict[str, _Coverage]:
+def _coverage(tickers: tuple[str, ...], deadline: _Deadline) -> dict[str, _Coverage]:
     rows = _client.select(
         "price_coverage",
         {
@@ -87,6 +116,7 @@ def _coverage(tickers: tuple[str, ...]) -> dict[str, _Coverage]:
             "select": "ticker,start_date,end_date,fetched_at,full_refreshed_at",
         },
         admin=True,
+        deadline=deadline.at,
     )
     return {
         row["ticker"]: _Coverage(
@@ -99,7 +129,7 @@ def _coverage(tickers: tuple[str, ...]) -> dict[str, _Coverage]:
     }
 
 
-def _stored_series(tickers, start: date, end: date) -> dict[str, pd.Series]:
+def _stored_series(tickers, start: date, end: date, deadline: _Deadline) -> dict[str, pd.Series]:
     if not tickers:
         return {}
     rows = _client.select(
@@ -111,6 +141,7 @@ def _stored_series(tickers, start: date, end: date) -> dict[str, pd.Series]:
             "order": "ticker.asc,day.asc",
         },
         admin=True,
+        deadline=deadline.at,
     )
     if not rows:
         return {}
@@ -126,14 +157,17 @@ def _stored_series(tickers, start: date, end: date) -> dict[str, pd.Series]:
     }
 
 
-def _download_groups(plans: dict[str, tuple[date, date]], download: Downloader) -> dict[str, pd.Series]:
+def _download_groups(
+    plans: dict[str, tuple[date, date]], download: Downloader, deadline: _Deadline
+) -> dict[str, pd.Series]:
     """Download each ``ticker -> (start, end)`` plan, batching equal ranges."""
     groups: dict[tuple[date, date], list[str]] = defaultdict(list)
     for ticker, window in plans.items():
         groups[window].append(ticker)
     series: dict[str, pd.Series] = {}
     for (start, end), tickers in groups.items():
-        frame = download(tuple(tickers), start, end)
+        with deadline.paused():
+            frame = download(tuple(tickers), start, end)
         for ticker in frame.columns:
             values = frame[ticker].dropna()
             values = values[values > 0]
@@ -157,7 +191,7 @@ def _readjusted(stored: pd.Series | None, fresh: pd.Series) -> bool:
     return bool(((old - new).abs() / new.abs() > ADJUSTMENT_TOLERANCE).any())
 
 
-def _write(series: dict[str, pd.Series]) -> None:
+def _write(series: dict[str, pd.Series], deadline: _Deadline) -> None:
     rows = [
         {"ticker": ticker, "day": day.date().isoformat(), "close": float(value)}
         for ticker, values in series.items()
@@ -171,14 +205,15 @@ def _write(series: dict[str, pd.Series]) -> None:
             upsert=True,
             on_conflict="ticker,day",
             returning=False,
+            deadline=deadline.at,
         )
 
 
-def _write_coverage(rows: list[dict]) -> None:
+def _write_coverage(rows: list[dict], deadline: _Deadline) -> None:
     if rows:
         _client.insert(
             "price_coverage", rows, admin=True, upsert=True,
-            on_conflict="ticker", returning=False,
+            on_conflict="ticker", returning=False, deadline=deadline.at,
         )
 
 
@@ -187,20 +222,29 @@ def fetch(tickers: tuple[str, ...], start: date, end: date, download: Downloader
 
     ``download(tickers, start, end)`` is the provider download (same frame
     shape as ``download_prices``). Returns ``None`` when the store is disabled
-    or unavailable, so the caller downloads everything itself.
+    or unavailable (failed, slower than the budget, or paused after a failure),
+    so the caller downloads everything itself.
     """
-    if _client is None or not tickers:
+    global _paused_until
+    if _client is None or not tickers or time.monotonic() < _paused_until:
         return None
     try:
-        return _fetch(tuple(tickers), start, end, download)
+        return _fetch(tuple(tickers), start, end, download, _Deadline(_budget_seconds))
     except (InsForgeError, KeyError, TypeError, ValueError) as error:
-        logger.warning("Price store unavailable; downloading directly: %s", error)
+        _paused_until = time.monotonic() + FAILURE_PAUSE_SECONDS
+        logger.warning(
+            "Price store unavailable; downloading directly for the next %d minutes: %s",
+            FAILURE_PAUSE_SECONDS // 60,
+            error,
+        )
         return None
 
 
-def _fetch(tickers: tuple[str, ...], start: date, end: date, download: Downloader) -> pd.DataFrame:
+def _fetch(
+    tickers: tuple[str, ...], start: date, end: date, download: Downloader, deadline: _Deadline
+) -> pd.DataFrame:
     now = datetime.now(timezone.utc)
-    coverage = _coverage(tickers)
+    coverage = _coverage(tickers, deadline)
     full: dict[str, tuple[date, date]] = {}
     tail: dict[str, tuple[date, date]] = {}
     for ticker in tickers:
@@ -214,21 +258,21 @@ def _fetch(tickers: tuple[str, ...], start: date, end: date, download: Downloade
         else:
             tail[ticker] = (stored.end - timedelta(days=OVERLAP_DAYS), max(end, stored.end))
 
-    tail_series = _download_groups(tail, download)
+    tail_series = _download_groups(tail, download, deadline)
     if tail_series:
         overlap_start = min(window[0] for window in tail.values())
         overlap_end = max(coverage[ticker].end for ticker in tail)
-        stored_overlap = _stored_series(tuple(tail_series), overlap_start, overlap_end)
+        stored_overlap = _stored_series(tuple(tail_series), overlap_start, overlap_end, deadline)
         for ticker, fresh in list(tail_series.items()):
             if _readjusted(stored_overlap.get(ticker), fresh):
                 logger.info("Price history of %s was re-adjusted; downloading it in full", ticker)
                 stored = coverage[ticker]
                 full[ticker] = (stored.start, max(end, stored.end))
                 del tail_series[ticker]
-    full_series = _download_groups(full, download)
+    full_series = _download_groups(full, download, deadline)
 
     stamp = now.isoformat()
-    _write({**tail_series, **full_series})
+    _write({**tail_series, **full_series}, deadline)
     _write_coverage(
         [
             {
@@ -238,7 +282,8 @@ def _fetch(tickers: tuple[str, ...], start: date, end: date, download: Downloade
                 "fetched_at": stamp,
             }
             for ticker in tail_series
-        ]
+        ],
+        deadline,
     )
     _write_coverage(
         [
@@ -250,7 +295,8 @@ def _fetch(tickers: tuple[str, ...], start: date, end: date, download: Downloade
                 "full_refreshed_at": stamp,
             }
             for ticker in full_series
-        ]
+        ],
+        deadline,
     )
     if tail or full:
         logger.info(
@@ -258,7 +304,7 @@ def _fetch(tickers: tuple[str, ...], start: date, end: date, download: Downloade
             len(tickers) - len(tail) - len(full), len(tail_series), len(full_series), start, end,
         )
 
-    series = _stored_series(tickers, start, end)
+    series = _stored_series(tickers, start, end, deadline)
     frames = [series[ticker].rename(ticker) for ticker in tickers if ticker in series]
     if not frames:
         return pd.DataFrame()

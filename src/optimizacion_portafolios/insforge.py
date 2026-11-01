@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -74,9 +75,16 @@ class InsForgeClient:
         params: dict | None = None,
         json: Any = None,
         headers: dict | None = None,
+        deadline: float | None = None,
     ) -> Any:
         if not self.settings.api_key:
             raise InsForgeError("Falta INSFORGE_API_KEY para operaciones del servidor.")
+        # ``deadline`` is a ``time.monotonic()`` value shared by several calls.
+        timeout = self.timeout
+        if deadline is not None:
+            timeout = min(timeout, deadline - time.monotonic())
+            if timeout <= 0:
+                raise InsForgeError("Se agotó el tiempo de espera de InsForge.")
         request_headers = {"Authorization": f"Bearer {self.settings.api_key}"}
         if json is not None:
             request_headers["Content-Type"] = "application/json"
@@ -88,7 +96,7 @@ class InsForgeClient:
                 params=params,
                 json=json,
                 headers=request_headers,
-                timeout=self.timeout,
+                timeout=timeout,
             )
         except requests.RequestException as error:
             raise InsForgeError(str(error)) from error
@@ -117,6 +125,7 @@ class InsForgeClient:
         *,
         admin: bool = True,
         limit: int | None = None,
+        deadline: float | None = None,
     ) -> list[dict]:
         """Rows of ``table`` matching PostgREST ``params``, paging past the cap."""
         rows: list[dict] = []
@@ -124,7 +133,9 @@ class InsForgeClient:
         while True:
             page = PAGE_SIZE if limit is None else min(PAGE_SIZE, limit - len(rows))
             query = {**(params or {}), "limit": page, "offset": offset}
-            batch = self._request("GET", f"/api/database/records/{table}", params=query) or []
+            batch = self._request(
+                "GET", f"/api/database/records/{table}", params=query, deadline=deadline
+            ) or []
             rows.extend(batch)
             if len(batch) < page or (limit is not None and len(rows) >= limit):
                 return rows
@@ -139,6 +150,7 @@ class InsForgeClient:
         upsert: bool = False,
         on_conflict: str | None = None,
         returning: bool = True,
+        deadline: float | None = None,
     ) -> list[dict]:
         if not rows:
             return []
@@ -152,6 +164,7 @@ class InsForgeClient:
             params=params,
             json=rows,
             headers={"Prefer": ",".join(prefer)},
+            deadline=deadline,
         )
         return result or []
 

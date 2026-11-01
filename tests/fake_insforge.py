@@ -1,6 +1,7 @@
 """In-memory stand-in for ``InsForgeClient`` (no network) used by the tests."""
 
 import re
+import time
 
 from optimizacion_portafolios.insforge import InsForgeError, InsForgeSettings
 
@@ -41,21 +42,25 @@ class FakeInsForge:
         return bool(self.settings.api_key)
 
     # ------------------------------------------------------------ database
-    def _check_key(self):
+    def _check_key(self, deadline=None):
         if not self.settings.api_key:
             raise InsForgeError("no admin key")
+        if deadline is not None and time.monotonic() >= deadline:
+            raise InsForgeError("timeout")
 
     def _rows(self, table):
         return self.tables.setdefault(table, [])
 
-    def select(self, table, params=None, *, admin=True, limit=None):
-        self._check_key()
+    def select(self, table, params=None, *, admin=True, limit=None, deadline=None):
+        self._check_key(deadline)
         self.calls.append(("select", table))
         rows = [dict(row) for row in self._rows(table) if _matches(row, params or {})]
         return rows[:limit] if limit is not None else rows
 
-    def insert(self, table, rows, *, admin=True, upsert=False, on_conflict=None, returning=True):
-        self._check_key()
+    def insert(
+        self, table, rows, *, admin=True, upsert=False, on_conflict=None, returning=True, deadline=None
+    ):
+        self._check_key(deadline)
         self.calls.append(("insert", table, len(rows)))
         stored = self.tables.setdefault(table, [])
         created = []
