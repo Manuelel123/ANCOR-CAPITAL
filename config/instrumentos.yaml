@@ -9,10 +9,19 @@
 verificado: '2026-11-04'
 nota: Son ejemplos educativos y pueden cambiar. Verifica montos y condiciones con la entidad.
 
-# Nivel de capital desde el que se destaca HRP guiado a quien todavía no invierte.
-# Desde $5.000.000 el costo de armar 4 posiciones ronda 1,2 % (tarifa de referencia
-# de $14.875 por operación). Con menos capital sigue disponible, sin destacarse.
-hrp_destacado_desde: medio
+# La optimización de portafolios se habilita desde este capital, al dólar del día.
+# Referencia: 4 compras en Trii cuestan cerca de 1,8 % de US$1.000; en Interactive
+# Brokers, cerca de 0,4 %, sin contar el giro al exterior.
+optimizacion:
+  umbral_usd: 1000
+  titulo: ¿Por qué se necesitan US${usd}?
+  motivo: >-
+    Un portafolio óptimo parte de diversificar: repartir tu dinero entre varios
+    activos para que la caída de uno no afecte todo. Por eso hay que comprar varios,
+    y cada compra tiene un costo. Con poco capital, esos costos pueden ser una parte
+    alta de tu inversión.
+  habilitada_desde: Esta herramienta se habilita desde US${usd} (hoy {cop}, según la {fuente} del {fecha}).
+  nota_activos: Con montos cercanos a US$1.000, un portafolio de 4 a 6 activos suele costar menos que uno grande.
 
 fondo_incompleto: >-
   Mientras completas tu fondo de emergencia, ves solo opciones de riesgo bajo, monto
@@ -38,6 +47,10 @@ pasos:
   hrp_guiado:
     titulo: Arma un ejemplo guiado con HRP
     descripcion: Atlas te acompaña y te explica por qué cada activo pesa lo que pesa.
+    destino: hrp.hrp
+  hrp_bloqueado:
+    titulo: Conoce qué te falta para optimizar tu portafolio
+    descripcion: La optimización se habilita desde US$1.000; aquí ves por qué.
     destino: hrp.hrp
   hrp_libre:
     titulo: Construye tu portafolio con HRP

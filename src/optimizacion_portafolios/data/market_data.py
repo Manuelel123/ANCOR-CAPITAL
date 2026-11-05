@@ -316,6 +316,11 @@ def fetch_fundamental_information(ticker: str) -> dict:
     return _ticker_info(ticker)
 
 
+def exchange_rate_to_usd(currency: str) -> float:
+    """USD per unit of ``currency``."""
+    return _exchange_rate_to_usd(currency)
+
+
 def _exchange_rate_to_usd(currency: str) -> float:
     currency = currency.upper()
     if currency == "USD":

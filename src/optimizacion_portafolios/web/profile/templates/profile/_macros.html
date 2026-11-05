@@ -16,6 +16,15 @@
   </fieldset>
 {% endmacro %}
 
+{% macro amount_field(name, legend, value, invalid=False, help=None) %}
+  <div class="form-field">
+    <label class="field-label" for="campo-{{ name }}">{{ legend }}</label>
+    {% if help %}<p class="help-text" id="ayuda-{{ name }}">{{ help }}</p>{% endif %}
+    <input id="campo-{{ name }}" name="{{ name }}" type="text" inputmode="numeric" autocomplete="off" value="{{ value if value is not none else '' }}"{% if help %} aria-describedby="ayuda-{{ name }}"{% endif %}{% if invalid %} aria-invalid="true"{% endif %}>
+    {% if invalid %}<p class="field-error">Escribe un monto mayor que cero.</p>{% endif %}
+  </div>
+{% endmacro %}
+
 {% macro profile_summary(view) %}
   <dl class="metric-list">
     <div><dt>Perfil final</dt><dd>{{ view.final_label }}</dd></div>

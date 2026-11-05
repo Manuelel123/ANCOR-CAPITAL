@@ -15,7 +15,7 @@ DISCLAIMER = "Información educativa. No es recomendación de inversión ni ases
 QUESTIONNAIRE_PATH = "/perfil/cuestionario"
 # One step per page: starting point, goal, backing.
 STEPS = (
-    {"k1": "3", "broker": "1", "capital_rango": "5m_30m", "aporte": "3"},
+    {"k1": "3", "broker": "1", "capital_monto": "10000000", "aporte": "3"},
     {"horizonte": "de_3_a_5", "p2": "3", "p1": "3"},
     {"p6": "1"},
 )
@@ -57,7 +57,7 @@ class MandatoryProfileTests(ProfileTestCase):
         self.assertEqual(path_of(response), QUESTIONNAIRE_PATH)
         html = self.client.get(QUESTIONNAIRE_PATH).data.decode()
         self.assertIn("Paso 1 de 3", html)
-        self.assertIn("Menos de $50.000", html)
+        self.assertIn('name="capital_monto"', html)
         self.assertIn("1. ¿Qué has hecho con tu plata hasta hoy?", html)
         self.assertIn("2. ¿Ya tienes cuenta en un broker?", html)
         self.assertIn("3. ¿Con cuánto capital cuentas hoy para invertir?", html)
@@ -126,6 +126,7 @@ class QuestionnaireFlowTests(ProfileTestCase):
             self.assertEqual((profile.nivel_tolerancia, profile.nivel_capacidad), ("moderado", "arriesgado"))
             self.assertEqual(profile.rol_sugerido, "inversionista")
             self.assertEqual(profile.respuestas["p1"], 3)
+            self.assertEqual(profile.respuestas["capital_monto"], 10000000)
             self.assertEqual((profile.capital_rango, profile.horizonte), ("5m_30m", "de_3_a_5"))
             self.assertEqual(db.session.scalars(select(ProfileDraft)).all(), [])
         with self.client.session_transaction() as session:
@@ -186,7 +187,7 @@ class QuestionnaireFlowTests(ProfileTestCase):
 
     def test_incomplete_or_invalid_step_is_rejected(self):
         self.sign_in_new()
-        response = self.post(QUESTIONNAIRE_PATH, paso="0", accion="siguiente", k1="3", capital_rango="1000")
+        response = self.post(QUESTIONNAIRE_PATH, paso="0", accion="siguiente", k1="3", capital_monto="0")
         self.assertEqual(response.status_code, 400)
         self.assertIn("Responde todas las preguntas", response.data.decode())
         self.answer(0)

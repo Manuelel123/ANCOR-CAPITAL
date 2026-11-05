@@ -196,6 +196,25 @@ class FinalProfileTests(unittest.TestCase):
         self.assertIn("«Moderado»", explain(QUESTIONNAIRE, result))
 
 
+class CapitalAmountTests(unittest.TestCase):
+    def test_an_amount_falls_in_its_range(self):
+        cases = {1: "menos_50k", 49999: "menos_50k", 50000: "50k_200k", 999999: "200k_1m", 1000000: "1m_5m",
+                 5000000: "5m_30m", 30000000: "mas_30m", 900000000: "mas_30m"}
+        for amount, choice in cases.items():
+            self.assertEqual(QUESTIONNAIRE.capital_range_for(amount), choice, amount)
+
+    def test_bounds_include_earlier_versions(self):
+        self.assertEqual(QUESTIONNAIRE.capital_bounds("1m_5m"), (1000000, 5000000))
+        self.assertEqual(QUESTIONNAIRE.capital_bounds("mas_30m"), (30000000, None))
+        self.assertEqual(QUESTIONNAIRE.capital_bounds("20m_100m"), (20000000, 100000000))
+
+    def test_ranges_must_grow(self):
+        data = copy.deepcopy(RAW)
+        data["datos_previos"]["capital"]["opciones"][2]["desde"] = 1
+        with self.assertRaisesRegex(QuestionnaireError, "deben crecer"):
+            parse_questionnaire(data, source="prueba.yaml")
+
+
 class CategoryTests(unittest.TestCase):
     def test_the_matrix(self):
         expected = {

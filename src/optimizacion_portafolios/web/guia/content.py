@@ -87,12 +87,21 @@ def parse_instruments(data, source: str = "instrumentos") -> dict:
     """Check the catalog and return it; ``GuideError`` names what is wrong."""
     if not isinstance(data, dict):
         raise GuideError(f"{source}: el archivo debe ser un mapa YAML.")
-    for field in ("verificado", "nota", "fondo_incompleto", "hrp_destacado_desde"):
+    for field in ("verificado", "nota", "fondo_incompleto"):
         if not str(data.get(field) or "").strip():
             raise GuideError(f"{source}: falta el texto de «{field}».")
+    optimization = data.get("optimizacion")
+    if not isinstance(optimization, dict):
+        raise GuideError(f"{source}: falta «optimizacion».")
+    threshold = optimization.get("umbral_usd")
+    if isinstance(threshold, bool) or not isinstance(threshold, int) or threshold <= 0:
+        raise GuideError(f"{source}: «optimizacion.umbral_usd» debe ser un monto en dólares.")
+    for field in ("titulo", "motivo", "habilitada_desde", "nota_activos"):
+        if not str(optimization.get(field) or "").strip():
+            raise GuideError(f"{source}: falta el texto de «optimizacion.{field}».")
     steps = data.get("pasos")
-    if not isinstance(steps, dict) or not {"hrp_guiado", "hrp_libre"} <= set(steps):
-        raise GuideError(f"{source}: «pasos» debe incluir hrp_guiado y hrp_libre.")
+    if not isinstance(steps, dict) or not {"hrp_guiado", "hrp_libre", "hrp_bloqueado"} <= set(steps):
+        raise GuideError(f"{source}: «pasos» debe incluir hrp_guiado, hrp_libre y hrp_bloqueado.")
     for step_id, step in steps.items():
         for key in ("titulo", "descripcion", "destino"):
             if not isinstance(step, dict) or not str(step.get(key) or "").strip():

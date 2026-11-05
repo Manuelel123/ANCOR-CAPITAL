@@ -136,6 +136,7 @@ def _configure_storage(app: Flask, testing: bool) -> None:
     login_manager.init_app(app)
     with app.app_context():
         if testing:
+            app.config.setdefault("DOLLAR_RATE", None)  # no network in the tests
             db.create_all()
         elif os.environ.get("ATLAS_AUTO_MIGRATE", "1") != "0" and os.path.isdir(
             os.path.join(MIGRATIONS_DIRECTORY, "versions")

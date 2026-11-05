@@ -9,6 +9,7 @@ role from the diagnosis (the gestor keeps theirs).
 from __future__ import annotations
 
 import logging
+import re
 
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user
@@ -25,6 +26,7 @@ from optimizacion_portafolios.profiling import (
     format_points,
     format_score,
 )
+from optimizacion_portafolios.profiling.questionnaire import CAPITAL_AMOUNT_FIELD
 from optimizacion_portafolios.storage import db
 from optimizacion_portafolios.storage.models import Profile
 from optimizacion_portafolios.storage.profiles import (
@@ -37,12 +39,14 @@ from optimizacion_portafolios.storage.profiles import (
 )
 from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE, canonical_role
 from optimizacion_portafolios.web.guia.journey import build_journey
+from optimizacion_portafolios.web.guia.threshold import format_cop
 from optimizacion_portafolios.web.profile import bp
 from optimizacion_portafolios.web.profile.access import get_questionnaire, refresh_profile_session
 
 logger = logging.getLogger(__name__)
 
 DISCLAIMER = "Información educativa. No es recomendación de inversión ni asesoría financiera."
+MAX_AMOUNT_DIGITS = 14
 ROLE_LABELS = {"novato": "Novato", "inversionista": "Inversionista", "gestor": "Gestor"}
 
 
@@ -60,6 +64,13 @@ def _load_draft(questionnaire: Questionnaire) -> tuple[dict, int]:
     return data, max(0, min(draft.paso, len(questionnaire.steps) - 1))
 
 
+def _parse_amount(raw) -> int | None:
+    """Pesos typed by the user (``3.500.000`` or ``$3500000``); ``None`` if not valid."""
+    digits = re.sub(r"\D", "", raw or "")
+    amount = int(digits) if digits and len(digits) <= MAX_AMOUNT_DIGITS else 0
+    return amount or None
+
+
 def _step_questions(questionnaire: Questionnaire, step: int):
     return questionnaire.block(questionnaire.steps[step]).questions
 
@@ -71,21 +82,25 @@ def _step_prior_fields(questionnaire: Questionnaire, step: int) -> list[str]:
 
 def _merge_step(questionnaire: Questionnaire, step: int, data: dict, form) -> list[str]:
     """Copy the valid answers of ``step`` from ``form`` into ``data``; return missing fields."""
-    lookups = {"capital_rango": questionnaire.capital, "horizonte": questionnaire.horizon}
     prior = _step_prior_fields(questionnaire, step)
-    for name in prior:
-        value = form.get(name, "")
+    if "capital_rango" in prior:
+        amount = _parse_amount(form.get(CAPITAL_AMOUNT_FIELD))
+        if amount is not None:
+            data[CAPITAL_AMOUNT_FIELD] = amount
+            data["capital_rango"] = questionnaire.capital_range_for(amount)
+    if "horizonte" in prior:
+        value = form.get("horizonte", "")
         try:
-            lookups[name](value)
+            questionnaire.horizon(value)
         except KeyError:
-            continue
-        data[name] = value
+            pass
+        else:
+            data["horizonte"] = value
     questions = _step_questions(questionnaire, step)
     submitted = {question.id: form.get(question.id) for question in questions if question.id in form}
     data["respuestas"].update(clean_answers(questionnaire, submitted))
-    return [name for name in prior if not data.get(name)] + [
-        question.id for question in questions if question.id not in data["respuestas"]
-    ]
+    missing = [CAPITAL_AMOUNT_FIELD if name == "capital_rango" else name for name in prior if not data.get(name)]
+    return missing + [question.id for question in questions if question.id not in data["respuestas"]]
 
 
 def _first_incomplete_step(questionnaire: Questionnaire, data: dict) -> int | None:
@@ -100,8 +115,14 @@ def _first_incomplete_step(questionnaire: Questionnaire, data: dict) -> int | No
 def _field(questionnaire: Questionnaire, name: str, number: int, data: dict) -> dict:
     """Template data of one field of the wizard."""
     if name == "capital_rango":
-        legend, options = questionnaire.capital_text, questionnaire.capital_options
-    elif name == "horizonte":
+        return {
+            "name": CAPITAL_AMOUNT_FIELD,
+            "legend": f"{number}. {questionnaire.capital_text}",
+            "amount": True,
+            "selected": data.get(CAPITAL_AMOUNT_FIELD),
+            "help": "Escribe el monto en pesos colombianos (COP), por ejemplo 3500000.",
+        }
+    if name == "horizonte":
         legend, options = questionnaire.horizon_text, questionnaire.horizon_options
     else:
         question = questionnaire.question(name)
@@ -117,7 +138,7 @@ def _field(questionnaire: Questionnaire, name: str, number: int, data: dict) -> 
         "legend": f"{number}. {legend}",
         "options": [(choice.id, choice.text) for choice in options],
         "selected": data.get(name),
-        "help": "Montos en pesos colombianos (COP)." if name == "capital_rango" else None,
+        "help": None,
     }
 
 
@@ -187,7 +208,7 @@ def save_step():
         flash(str(error), "error")
         return redirect(url_for("profile.questionnaire", paso=0))
     try:
-        profile = save_profile(current_user.id, result)
+        profile = save_profile(current_user.id, result, capital_amount=data.get(CAPITAL_AMOUNT_FIELD))
         if not _is_gestor():
             current_user.role = result.suggested_role
             current_user.role_confirmed = True
@@ -258,7 +279,10 @@ def _profile_view(questionnaire: Questionnaire, profile: Profile) -> dict:
             choice_text(questionnaire.horizon_text_of, profile.horizonte),
             f"Máximo {label(profile.nivel_horizonte).lower()}" if horizon_capped else "Sin tope",
         ),
-        "capital": choice_text(questionnaire.capital_text_of, profile.capital_rango),
+        "capital": (
+            format_cop(amount) if (amount := (profile.respuestas or {}).get(CAPITAL_AMOUNT_FIELD))
+            else choice_text(questionnaire.capital_text_of, profile.capital_rango)
+        ),
         "suggested_role": canonical_role(profile.rol_sugerido),
     }
 

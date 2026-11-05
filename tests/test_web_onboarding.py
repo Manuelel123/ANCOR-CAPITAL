@@ -3,15 +3,20 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 from urllib.parse import urlsplit
 
+import requests
 import yaml
 from flask import url_for
 
 import optimizacion_portafolios
+from optimizacion_portafolios.data import trm
+from optimizacion_portafolios.data.trm import DollarRate
 from optimizacion_portafolios.profiling import load_questionnaire
 from optimizacion_portafolios.profiling.avisos import DEFAULT_PATH, NoticesError, load_notices, parse_notices
 from optimizacion_portafolios.storage import db
+from optimizacion_portafolios.storage.profiles import get_current_profile
 from optimizacion_portafolios.storage.users import get_user_by_email
 from optimizacion_portafolios.web import create_app
 from optimizacion_portafolios.web.guia.content import DEFAULT_PATH as GUIDE_FILE
@@ -186,7 +191,7 @@ class FullJourneyTests(AccountTestCase):
         self.assertIn("/perfil/cuestionario", self.client.get(INTRO_PATH).get_data(as_text=True))
 
         steps = (
-            {"k1": "1", "broker": "1", "capital_rango": "menos_50k", "aporte": "2"},
+            {"k1": "1", "broker": "1", "capital_monto": "40.000", "aporte": "2"},
             {"horizonte": "mas_5", "p2": "3", "p1": "3"},
             {"p6": "1"},
         )
@@ -371,10 +376,8 @@ class DiagnosisTests(OnboardingTestCase):
         self.assertIn("Arma un ejemplo guiado con HRP", home)
         self.assertNotIn("Construye tu portafolio con HRP", home)
 
-    def test_with_low_capital_hrp_is_not_highlighted_but_stays_open(self):
-        home = self.diagnosed(self.INICIAL, capital="1m_5m")
-        self.assertNotIn("guiado con HRP", home)
-        self.assertEqual(self.client.get("/hrp").status_code, 200)
+    def test_who_starts_sees_the_guided_view_without_a_dollar_rate(self):
+        self.assertIn("Arma un ejemplo guiado con HRP", self.diagnosed(self.INICIAL, capital="1m_5m"))
 
     def test_capital_never_changes_the_category(self):
         self.assertIn("Categoría Intermedio", self.diagnosed(self.INTERMEDIO, capital="menos_50k"))
@@ -445,6 +448,117 @@ class DiagnosisTests(OnboardingTestCase):
         del data["instrumentos"][1]["fuente"]
         with self.assertRaisesRegex(GuideError, "fuente.*número 2"):
             parse_instruments(data)
+
+
+class OptimizationThresholdTests(OnboardingTestCase):
+    RATE = DollarRate(3221.19, "2026-11-05", "TRM")
+
+    def setUp(self):
+        super().setUp()
+        self.app.config["DOLLAR_RATE"] = self.RATE
+
+    def user_with(self, amount=None, capital="1m_5m", answers=None, role="novato"):
+        user_id = self.sign_in(profile=False, role=role, role_confirmed=True)
+        add_test_profile(self.app, user_id, capital=capital, horizon="mas_5", answers=answers)
+        if amount is not None:
+            with self.app.app_context():
+                profile = get_current_profile(int(user_id))
+                profile.respuestas = {**profile.respuestas, "capital_monto": amount}
+                db.session.commit()
+
+    def hrp(self):
+        return self.client.get("/hrp").get_data(as_text=True)
+
+    def test_below_the_threshold_the_page_explains_why(self):
+        self.user_with(2000000)
+        html = self.hrp()
+        self.assertIn("¿Por qué se necesitan US$1.000?", html)
+        self.assertIn("parte de diversificar", html)
+        self.assertIn("cada compra tiene un costo", html)
+        self.assertIn("hoy $3.221.190, según la TRM del 2026-11-05", html)
+        self.assertIn("$2.000.000", html)
+        self.assertIn("US$380", html)
+        self.assertIn(DISCLAIMER, html)
+        self.assertNotIn('id="hrp-form"', html)
+
+    def test_at_the_threshold_it_opens_with_the_cost_note(self):
+        self.user_with(3221190 + 1)
+        html = self.hrp()
+        self.assertIn('id="hrp-form"', html)
+        self.assertIn("4 a 6 activos", html)
+
+    def test_it_also_applies_to_who_already_invests(self):
+        self.user_with(1000, answers=DiagnosisTests.AVANZADO, role="inversionista")
+        self.assertNotIn('id="hrp-form"', self.hrp())
+        home = self.client.get("/").get_data(as_text=True)
+        self.assertIn("Conoce qué te falta", home)
+        self.assertNotIn("Construye tu portafolio con HRP", home)
+
+    def test_a_better_rate_changes_the_answer(self):
+        self.user_with(3000000)
+        self.assertNotIn('id="hrp-form"', self.hrp())
+        self.app.config["DOLLAR_RATE"] = DollarRate(2900.0, "2026-11-06", "TRM")
+        self.assertIn('id="hrp-form"', self.hrp())
+
+    def test_without_a_rate_nobody_is_stopped(self):
+        self.user_with(1000)
+        self.app.config["DOLLAR_RATE"] = None
+        self.assertIn('id="hrp-form"', self.hrp())
+
+    def test_a_saved_range_below_the_threshold_stays_closed(self):
+        self.user_with(capital="200k_1m")
+        html = self.hrp()
+        self.assertNotIn('id="hrp-form"', html)
+        self.assertIn("US$", html)
+
+    def test_a_saved_range_above_the_threshold_opens(self):
+        self.user_with(capital="5m_30m")
+        self.assertIn('id="hrp-form"', self.hrp())
+
+    def test_a_saved_range_across_the_threshold_asks_for_the_amount(self):
+        self.user_with(capital="1m_5m")
+        html = self.hrp()
+        self.assertNotIn('id="hrp-form"', html)
+        self.assertIn("monto exacto", html)
+
+    def test_the_gestor_is_never_stopped(self):
+        self.user_with(1000, role="gestor")
+        self.assertEqual(self.client.get("/hrp").status_code, 200)
+        self.assertNotIn("¿Por qué se necesitan", self.hrp())
+
+
+class DollarRateTests(unittest.TestCase):
+    def setUp(self):
+        trm.clear_rate()
+        self.addCleanup(trm.clear_rate)
+
+    def response(self, payload):
+        response = mock.Mock()
+        response.json.return_value = payload
+        response.raise_for_status.return_value = None
+        return response
+
+    def test_the_official_trm_comes_first(self):
+        payload = [{"valor": "3221.19", "vigenciadesde": "2026-11-05T00:00:00.000"}]
+        with mock.patch.object(trm.requests, "get", return_value=self.response(payload)) as get:
+            rate = trm.current_rate()
+            trm.current_rate()
+        self.assertEqual(rate, DollarRate(3221.19, "2026-11-05", "TRM"))
+        self.assertEqual(get.call_count, 1)
+
+    def test_yahoo_is_the_fallback(self):
+        with mock.patch.object(trm.requests, "get", side_effect=requests.ConnectionError()), \
+                mock.patch.object(trm.market_data, "exchange_rate_to_usd", return_value=1 / 3200):
+            rate = trm.current_rate()
+        self.assertAlmostEqual(rate.value, 3200)
+        self.assertEqual(rate.source, "Yahoo Finance")
+
+    def test_with_no_source_there_is_no_rate_and_no_immediate_retry(self):
+        with mock.patch.object(trm.requests, "get", side_effect=requests.ConnectionError()) as get, \
+                mock.patch.object(trm.market_data, "exchange_rate_to_usd", side_effect=ValueError("sin datos")):
+            self.assertIsNone(trm.current_rate())
+            self.assertIsNone(trm.current_rate())
+        self.assertEqual(get.call_count, 1)
 
 
 class LanguageTests(unittest.TestCase):

@@ -15,6 +15,7 @@ from optimizacion_portafolios.profiling import (
 from optimizacion_portafolios.profiling.questionnaire import Category, Questionnaire
 from optimizacion_portafolios.storage.models import Profile
 from optimizacion_portafolios.web.guia.content import load_instruments
+from optimizacion_portafolios.web.guia.threshold import optimization_access
 from optimizacion_portafolios.web.profile.access import get_questionnaire
 
 CONTRIBUTION_QUESTION = "aporte"
@@ -46,13 +47,6 @@ def _contribution(questionnaire: Questionnaire, profile: Profile) -> str | None:
         return None
 
 
-def _highlights_hrp(questionnaire: Questionnaire, catalog: dict, capital_level: str | None) -> bool:
-    if capital_level is None:
-        return False
-    levels = questionnaire.capital_levels
-    return levels.index(capital_level) >= levels.index(catalog["hrp_destacado_desde"])
-
-
 def build_journey(profile: Profile) -> Journey:
     """Category and steps of a saved profile (works for any questionnaire version)."""
     questionnaire = get_questionnaire()
@@ -65,9 +59,11 @@ def build_journey(profile: Profile) -> Journey:
     step_ids = list(catalog["recorrido"][category.id])
     if has_ibkr:
         step_ids = ["guia_cuenta" if step_id == "guia" else step_id for step_id in step_ids]
-    if invests:
+    if not optimization_access(profile).unlocked:
+        step_ids.append("hrp_bloqueado")
+    elif invests:
         step_ids.insert(0, "hrp_libre")
-    elif _highlights_hrp(questionnaire, catalog, capital_level):
+    else:
         step_ids.append("hrp_guiado")
     return Journey(
         category=category,

@@ -29,6 +29,7 @@ INVESTS_ROUTE = "ya_invierte"
 STARTS_ROUTE = "empieza_de_cero"
 CATEGORY_ROUTES = (STARTS_ROUTE, INVESTS_ROUTE)
 CAPITAL_FIELD = "capital_rango"
+CAPITAL_AMOUNT_FIELD = "capital_monto"
 HORIZON_FIELD = "horizonte"
 PRIOR_FIELDS = (CAPITAL_FIELD, HORIZON_FIELD)
 
@@ -59,6 +60,8 @@ class Choice:
     text: str
     max_level: str | None = None  # horizon cap; None = no cap
     capital_level: str | None = None  # bajo, medio o alto (capital only)
+    low: int = 0  # capital only, in pesos
+    high: int | None = None
 
 
 @dataclass(frozen=True)
@@ -176,6 +179,19 @@ class Questionnaire:
     def horizon_text_of(self, choice_id: str) -> str:
         return _find_choice((*self.horizon_options, *self.legacy_horizon), choice_id).text
 
+    def capital_range_for(self, amount: int) -> str:
+        """Id of the range that contains ``amount`` (pesos)."""
+        return [choice.id for choice in self.capital_options if choice.low <= amount][-1]
+
+    def capital_bounds(self, choice_id: str) -> tuple[int, int | None]:
+        """``(low, high)`` in pesos of a range, also of earlier versions (``None``: no top)."""
+        for position, choice in enumerate(self.capital_options):
+            if choice.id == choice_id:
+                following = self.capital_options[position + 1:]
+                return choice.low, following[0].low if following else None
+        choice = _find_choice(self.legacy_capital, choice_id)
+        return choice.low, choice.high
+
     def capital_level(self, choice_id: str) -> str:
         """``bajo``, ``medio`` or ``alto``: which instruments to show, never a limit."""
         return _find_choice((*self.capital_options, *self.legacy_capital), choice_id).capital_level
@@ -280,7 +296,11 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
         level = raw.get("nivel")
         if level not in capital_levels:
             _fail(source, f"{where}: «{choice_id}» necesita un «nivel» de {', '.join(capital_levels)}.")
-        return Choice(choice_id, _text(source, raw.get("texto"), where), capital_level=level)
+        low = raw.get("desde")
+        if isinstance(low, bool) or not isinstance(low, int) or low < 0:
+            _fail(source, f"{where}: «{choice_id}» necesita «desde», un monto en pesos.")
+        return Choice(choice_id, _text(source, raw.get("texto"), where), capital_level=level, low=low,
+                      high=raw.get("hasta"))
 
     capital_options = tuple(
         capital_choice(_identifier(source, item.get("id"), "una opción de capital"), item, "datos_previos.capital")
@@ -288,6 +308,11 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
                      for raw in _sequence(source, capital.get("opciones"), "datos_previos.capital.opciones"))
     )
     _unique(source, [choice.id for choice in capital_options], "las opciones de capital")
+    if not capital_options or capital_options[0].low != 0:
+        _fail(source, "la primera opción de capital debe tener «desde: 0».")
+    lows = [choice.low for choice in capital_options]
+    if lows != sorted(set(lows)):
+        _fail(source, "los montos «desde» del capital deben crecer.")
     horizon_options = []
     for raw in _sequence(source, horizon.get("opciones"), "datos_previos.horizonte.opciones"):
         raw = _mapping(source, raw, "datos_previos.horizonte.opciones")

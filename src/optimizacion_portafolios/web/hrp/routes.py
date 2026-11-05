@@ -6,6 +6,7 @@ from io import BytesIO
 
 import numpy as np
 from flask import flash, render_template, request, send_file
+from flask_login import current_user
 
 from optimizacion_portafolios.web.common.notice import with_notice_html
 
@@ -16,7 +17,9 @@ from optimizacion_portafolios.data.catalogs import (
     BENCHMARKS,
     UNIVERSOS_HRP,
 )
+from optimizacion_portafolios.storage.profiles import get_current_profile
 from optimizacion_portafolios.web.account.hooks import record_backtest
+from optimizacion_portafolios.web.guia.threshold import access_view, optimization_access, optimization_text
 from optimizacion_portafolios.web.auth.permissions import can
 from optimizacion_portafolios.web.common import guided
 from optimizacion_portafolios.web.decisions import log as decision_log
@@ -159,6 +162,9 @@ def _backtest_config() -> BacktestConfig | None:
 
 
 def _guided_hrp():
+    access = optimization_access(get_current_profile(current_user.id))
+    if not access.unlocked:
+        return render_template("guia/locked.html", view=access_view(access))
     """HRP for novato / inversionista: predefined universe, fixed inputs."""
     universes = guided.GUIDED_HRP_UNIVERSES
     universe_name, available, selected = guided.guided_selection(universes)
@@ -202,6 +208,7 @@ def _guided_hrp():
     labels = guided.asset_labels(universes[universe_name])
     return render_template(
         "hrp/guided.html",
+        cost_note=optimization_text()["nota_activos"],
         universes=universes,
         universe_names=list(universes),
         universe_name=universe_name,

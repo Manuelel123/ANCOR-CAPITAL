@@ -42,25 +42,32 @@ niveles_capital: [bajo, medio, alto]
 datos_previos:
   capital:
     texto: ¿Con cuánto capital cuentas hoy para invertir?
+    # La persona escribe el monto; `desde` lo ubica en un rango.
     opciones:
       - id: menos_50k
         texto: Menos de $50.000
         nivel: bajo
+        desde: 0
       - id: 50k_200k
         texto: $50.000 a $200.000
         nivel: bajo
+        desde: 50000
       - id: 200k_1m
         texto: $200.000 a $1.000.000
         nivel: bajo
+        desde: 200000
       - id: 1m_5m
         texto: $1.000.000 a $5.000.000
         nivel: bajo
+        desde: 1000000
       - id: 5m_30m
         texto: $5.000.000 a $30.000.000
         nivel: medio
+        desde: 5000000
       - id: mas_30m
         texto: Más de $30.000.000
         nivel: alto
+        desde: 30000000
   horizonte:
     texto: ¿Cuándo necesitarías este dinero?
     # nivel_maximo: tope que impone el horizonte al perfil (null = sin tope).
@@ -212,14 +219,21 @@ legado:
     menos_1m:
       texto: Menos de 1 millón de pesos
       nivel: bajo
+      desde: 0
+      hasta: 1000000
     5m_20m:
       texto: De 5 a 20 millones de pesos
       nivel: medio
+      desde: 5000000
+      hasta: 20000000
     20m_100m:
       texto: De 20 a 100 millones de pesos
       nivel: medio
+      desde: 20000000
+      hasta: 100000000
     mas_100m:
       texto: Más de 100 millones de pesos
       nivel: alto
+      desde: 100000000
   horizonte:
     mas_3: Más de 3 años
