@@ -15,6 +15,7 @@ from optimizacion_portafolios.web import create_app
 from optimizacion_portafolios.web.guia.content import DEFAULT_PATH as GUIDE_FILE
 from optimizacion_portafolios.web.guia.content import GuideError, load_guide, parse_guide
 from support import TEST_PASSWORD, add_test_profile, create_test_user, csrf_from, login_session
+from test_web_accounts import AccountTestCase
 
 DISCLAIMER = "Información educativa. No es recomendación de inversión ni asesoría financiera."
 NOTICE_PATH = "/aviso-datos"
@@ -157,6 +158,37 @@ class IntroductionTests(OnboardingTestCase):
         self.assertEqual(self.client.get("/").status_code, 200)
         html = self.client.get(INTRO_PATH).get_data(as_text=True)
         self.assertIn(DISCLAIMER, html)
+
+
+class FullJourneyTests(AccountTestCase):
+    def test_a_new_account_walks_the_whole_path(self):
+        self.register(email="nueva@example.com", name="Nueva")
+        code = self.last_code("nueva@example.com")
+        response = self.post("/auth/verificar", code=code)
+        self.refresh_csrf()
+        self.assertEqual(path_of(response), NOTICE_PATH)
+
+        response = self.post(NOTICE_PATH, acepto="1")
+        self.assertEqual(path_of(response), INTRO_PATH)
+        self.assertIn("/perfil/cuestionario", self.client.get(INTRO_PATH).get_data(as_text=True))
+
+        steps = (
+            {"k1": "1", "capital_rango": "menos_50k", "aporte": "2"},
+            {"horizonte": "mas_5", "p2": "3", "p1": "3"},
+            {"p6": "1", "decision": "2"},
+        )
+        for number, answers in enumerate(steps):
+            response = self.post("/perfil/cuestionario", paso=str(number), accion="siguiente", **answers)
+        self.assertEqual(path_of(response), "/perfil/resultado")
+        self.assertEqual(path_of(self.client.get("/hrp")), "/perfil/resultado")
+
+        result = self.client.get("/perfil/resultado").get_data(as_text=True)
+        self.assertIn(GUIDE_PATH, result)
+        self.assertEqual(path_of(self.post("/perfil/rol", rol="novato")), "/")
+
+        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(self.client.get("/hrp").status_code, 200)
+        self.assertIn("no es el camino principal", self.client.get(GUIDE_PATH).get_data(as_text=True))
 
 
 class GuideTests(OnboardingTestCase):
