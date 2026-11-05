@@ -6,10 +6,10 @@
     <div>
       <p class="eyebrow">Seguimiento</p>
       <h1>Mis portafolios</h1>
-      <p class="lead">Portafolios que fijaste como óptimos desde HRP o Black-Litterman y que se monitorean desde la fecha de fijación.</p>
+      <p class="lead">Portafolios que fijaste como óptimos desde {{ 'HRP o Black-Litterman' if can_open('black_litterman.black_litterman') else 'HRP' }} y que se monitorean desde la fecha de fijación.</p>
     </div>
     <div class="page-header__actions">
-      <a class="button button-secondary" href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a>
+      {% if can_open('black_litterman.black_litterman') %}<a class="button button-secondary" href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a>{% endif %}
       <a class="button button-primary" href="{{ url_for('hrp.hrp') }}">Optimizar con HRP</a>
     </div>
   </header>
@@ -41,7 +41,7 @@
     <div class="empty-state">
       <p class="empty-state__title">Aún no tienes portafolios en seguimiento</p>
       {% if can('fix_portfolio') %}
-      <p>Calcula un portafolio en <a href="{{ url_for('hrp.hrp') }}">HRP</a> o <a href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a> y usa «Establecer como portafolio óptimo» en el resultado.</p>
+      <p>Calcula un portafolio en <a href="{{ url_for('hrp.hrp') }}">HRP</a>{% if can_open('black_litterman.black_litterman') %} o <a href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a>{% endif %} y usa «Establecer como portafolio óptimo» en el resultado.</p>
       {% else %}
       <p>Como novato ves tus portafolios en solo lectura. Fijar un portafolio para seguirlo está disponible con el rol inversionista (puedes cambiarlo en <a href="{{ url_for('profile.mine') }}">Mi perfil</a>).</p>
       {% endif %}

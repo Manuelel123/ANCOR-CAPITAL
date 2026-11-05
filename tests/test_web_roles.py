@@ -303,6 +303,29 @@ class OnlyHrpTests(unittest.TestCase):
             self.assertTrue(permissions.role_allows("gestor", endpoint))
 
 
+class NoBlackLittermanForLearnersTests(unittest.TestCase):
+    PAGES = ("/", "/hrp", "/portafolios/", "/historial", "/glosario", "/perfil/", "/introduccion")
+
+    def client_for(self, role):
+        app = create_app({"TESTING": True, "SECRET_KEY": "test-secret"})
+        client = app.test_client()
+        login_session(client, create_test_user(app, f"{role}@example.com", role=role, role_confirmed=True))
+        return client
+
+    def test_no_page_links_to_it(self):
+        for role in ("novato", "inversionista"):
+            client = self.client_for(role)
+            for path in self.PAGES:
+                with self.subTest(role=role, path=path):
+                    html = client.get(path).data.decode()
+                    self.assertNotIn('href="/black-litterman"', html)
+                    self.assertNotIn('href="/comparar"', html)
+
+    def test_the_gestor_keeps_it_in_mis_portafolios(self):
+        html = self.client_for("gestor").get("/portafolios/").data.decode()
+        self.assertIn('href="/black-litterman"', html)
+
+
 class PortadaTests(unittest.TestCase):
     def setUp(self):
         self.app = create_app({"TESTING": True, "SECRET_KEY": "test-secret"})
