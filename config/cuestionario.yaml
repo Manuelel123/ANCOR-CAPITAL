@@ -91,6 +91,12 @@ bloques:
           - Solo ahorro (cuenta, CDT, natillera)
           - Invierto en fondos
           - Invierto en acciones, ETF o cripto
+      - id: broker
+        texto: ¿Ya tienes cuenta en un broker?
+        opciones:
+          - 'No'
+          - Sí, en Interactive Brokers
+          - Sí, en otro broker
       - campo: capital_rango
       - id: aporte
         texto: ¿Cuánto podrías aportar cada mes?
@@ -182,6 +188,11 @@ categorias:
       adverso: intermedio
       moderado: avanzado
       arriesgado: avanzado
+
+# Quien ya tiene esta cuenta no ve los pasos para abrirla.
+cuenta_broker:
+  pregunta: broker
+  opcion_ibkr: Sí, en Interactive Brokers
 
 # Rol asignado según la experiencia, al guardar el perfil.
 rol_sugerido:

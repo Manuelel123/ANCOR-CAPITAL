@@ -186,7 +186,7 @@ class FullJourneyTests(AccountTestCase):
         self.assertIn("/perfil/cuestionario", self.client.get(INTRO_PATH).get_data(as_text=True))
 
         steps = (
-            {"k1": "1", "capital_rango": "menos_50k", "aporte": "2"},
+            {"k1": "1", "broker": "1", "capital_rango": "menos_50k", "aporte": "2"},
             {"horizonte": "mas_5", "p2": "3", "p1": "3"},
             {"p6": "1"},
         )
@@ -338,9 +338,9 @@ class GuideFileTests(unittest.TestCase):
 
 
 class DiagnosisTests(OnboardingTestCase):
-    INICIAL = {"k1": 1, "aporte": 3, "p2": 1, "p1": 2, "p6": 1}
-    AVANZADO = {"k1": 4, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
-    INTERMEDIO = {"k1": 1, "aporte": 3, "p2": 4, "p1": 4, "p6": 1}
+    INICIAL = {"k1": 1, "broker": 1, "aporte": 3, "p2": 1, "p1": 2, "p6": 1}
+    AVANZADO = {"k1": 4, "broker": 1, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
+    INTERMEDIO = {"k1": 1, "broker": 1, "aporte": 3, "p2": 4, "p1": 4, "p6": 1}
 
     def diagnosed(self, answers, capital="1m_5m", horizon="mas_5"):
         user_id = self.sign_in(profile=False, role_confirmed=True)
@@ -403,6 +403,33 @@ class DiagnosisTests(OnboardingTestCase):
         categories = {category.id for category in load_questionnaire().categories}
         self.assertEqual(set(load_instruments()["recorrido"]), categories)
 
+    def test_with_an_ibkr_account_the_opening_steps_disappear(self):
+        home = self.diagnosed({**self.AVANZADO, "broker": 2}, capital="mas_30m")
+        self.assertIn("Sigue con tu cuenta de Interactive Brokers", home)
+        self.assertNotIn("Conoce cómo abrir una cuenta", home)
+        self.assertNotIn('data-module="guide"', home)
+        self.assertNotIn("Broker internacional", self.options_html())
+        guide = self.client.get(GUIDE_PATH).get_data(as_text=True)
+        self.assertIn("Tu cuenta en Interactive Brokers", guide)
+        self.assertIn("Como ya tienes cuenta", guide)
+        for step in ("Primera compra", "Después"):
+            self.assertIn(step, guide)
+        for step in ("Preparar", "Crear el usuario", "Verificar identidad", "Fondear"):
+            self.assertNotIn(f". {step}<", guide)
+        self.assertIn("1. Primera compra", guide)
+
+    def test_with_another_broker_the_guide_stays_complete(self):
+        home = self.diagnosed({**self.AVANZADO, "broker": 3}, capital="mas_30m")
+        self.assertIn("Conoce cómo abrir una cuenta", home)
+        self.assertIn('data-module="guide"', home)
+        self.assertIn("1. Preparar", self.client.get(GUIDE_PATH).get_data(as_text=True))
+
+    def test_without_an_account_the_guide_stays_complete(self):
+        self.diagnosed(self.AVANZADO, capital="mas_30m")
+        guide = self.client.get(GUIDE_PATH).get_data(as_text=True)
+        self.assertIn("Abre tu cuenta en Interactive Brokers", guide)
+        self.assertIn("1. Preparar", guide)
+
     def test_the_gestor_stays_out_of_it(self):
         self.sign_in("jefa@example.com", role="gestor", role_confirmed=True)
         self.assertNotIn("Categoría", self.client.get("/").get_data(as_text=True))
@@ -458,7 +485,7 @@ class MyProfileTests(OnboardingTestCase):
 
 class ProfileRulesTests(OnboardingTestCase):
     TOOLS = ("/hrp", "/portafolios/", "/historial", "/guia/opciones", GUIDE_PATH)
-    ANSWERS = {"k1": 1, "aporte": 1, "p2": 4, "p1": 4, "p6": 1}
+    ANSWERS = {"k1": 1, "broker": 1, "aporte": 1, "p2": 4, "p1": 4, "p6": 1}
 
     def profiled(self, capital="1m_5m", horizon="mas_5", **answers):
         user_id = self.sign_in(profile=False, role_confirmed=True)

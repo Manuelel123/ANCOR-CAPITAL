@@ -27,6 +27,8 @@ aviso_comision: Atlas puede recibir una comisión si abres tu cuenta desde esta 
 
 alternativa: Si prefieres la Bolsa de Colombia, una alternativa es Trii.
 
+ya_tiene_cuenta: Como ya tienes cuenta en Interactive Brokers, te mostramos solo lo que sigue.
+
 # Mensaje según el capital del perfil vigente. Nunca esconde la guía.
 capital:
   bajo:
@@ -50,25 +52,32 @@ capital:
   medio_alto:
     nota: Con el capital que indicaste, esta guía es el camino para acciones y ETF.
 
+# `apertura: true`: pasos para abrir la cuenta; no se muestran a quien ya la tiene.
 pasos:
   - titulo: Preparar
+    apertura: true
     que_hacer: Cédula vigente (frente y reverso), comprobante de domicilio a tu nombre de menos de 3 a 6 meses, correo y celular activos.
     por_que: Sin esto la verificación se rechaza.
   - titulo: Crear el usuario
+    apertura: true
     que_hacer: País Colombia, cuenta individual tipo Cash.
     por_que: Cash significa que no puedes invertir dinero prestado.
   - titulo: Datos personales
+    apertura: true
     que_hacer: Tu nombre exactamente como sale en la cédula.
     por_que: Las diferencias de datos son la causa principal de demoras.
   - titulo: Cuestionario y W-8BEN
+    apertura: true
     que_hacer: Responde el perfil financiero y firma digitalmente el formulario W-8BEN.
     por_que: Certifica ante EE. UU. que no eres residente fiscal de ese país.
     advertencia: Caduca y hay que renovarlo.
   - titulo: Verificar identidad
+    apertura: true
     que_hacer: Sube fotos legibles con los cuatro bordes visibles.
     por_que: Las fotos borrosas o cortadas provocan rechazos. La aprobación tarda de 1 a 3 días hábiles.
     advertencia: No uses VPN que cambie tu país.
   - titulo: Fondear
+    apertura: true
     que_hacer: >-
       Transferencia internacional desde una cuenta a tu nombre, con la referencia
       única que da el portal. Tarda de 1 a 4 días hábiles. Empieza con un envío de

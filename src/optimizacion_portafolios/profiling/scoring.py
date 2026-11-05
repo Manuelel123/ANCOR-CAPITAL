@@ -134,6 +134,11 @@ def already_invests(questionnaire: Questionnaire, answers: Mapping[str, int]) ->
     return answers.get(rule.experience_question, 0) >= rule.min_experience
 
 
+def has_ibkr_account(questionnaire: Questionnaire, answers: Mapping[str, int]) -> bool:
+    """True when the person already has an Interactive Brokers account."""
+    return answers.get(questionnaire.broker_question) == questionnaire.ibkr_option
+
+
 def category_for(questionnaire: Questionnaire, final_level: str, answers: Mapping[str, int]) -> Category:
     """Diagnosis category from the final profile and whether the person invests."""
     route = INVESTS_ROUTE if already_invests(questionnaire, answers) else STARTS_ROUTE

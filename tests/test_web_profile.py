@@ -15,7 +15,7 @@ DISCLAIMER = "Información educativa. No es recomendación de inversión ni ases
 QUESTIONNAIRE_PATH = "/perfil/cuestionario"
 # One step per page: starting point, goal, backing.
 STEPS = (
-    {"k1": "3", "capital_rango": "5m_30m", "aporte": "3"},
+    {"k1": "3", "broker": "1", "capital_rango": "5m_30m", "aporte": "3"},
     {"horizonte": "de_3_a_5", "p2": "3", "p1": "3"},
     {"p6": "1"},
 )
@@ -59,7 +59,8 @@ class MandatoryProfileTests(ProfileTestCase):
         self.assertIn("Paso 1 de 3", html)
         self.assertIn("Menos de $50.000", html)
         self.assertIn("1. ¿Qué has hecho con tu plata hasta hoy?", html)
-        self.assertIn("2. ¿Con cuánto capital cuentas hoy para invertir?", html)
+        self.assertIn("2. ¿Ya tienes cuenta en un broker?", html)
+        self.assertIn("3. ¿Con cuánto capital cuentas hoy para invertir?", html)
         with self.client.session_transaction() as session:
             self.assertNotIn("perfil", session)
 

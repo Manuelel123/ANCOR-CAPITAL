@@ -118,6 +118,8 @@ class Questionnaire:
     # "ya_invierte" or "empieza_de_cero" -> risk level -> category id.
     category_matrix: dict = field(default_factory=dict)
     legacy_fund_complete_from: int = 1
+    broker_question: str = ""
+    ibkr_option: int = 0  # 1-based position
     # Choices of earlier versions, for the saved profiles that still use them.
     legacy_capital: tuple[Choice, ...] = ()
     legacy_horizon: tuple[Choice, ...] = ()
@@ -419,6 +421,9 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
             if row.get(level_id) not in category_ids:
                 _fail(source, f"categorias.matriz.{route}.{level_id} debe ser una de: {', '.join(category_ids)}.")
 
+    broker = _mapping(source, data.get("cuenta_broker"), "cuenta_broker")
+    ibkr_option = option_position(broker.get("pregunta"), broker.get("opcion_ibkr"), "cuenta_broker")
+
     legacy = data.get("legado") or {}
     legacy_capital = tuple(
         capital_choice(choice_id, _mapping(source, raw, "legado.capital"), "legado.capital")
@@ -449,6 +454,8 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
         categories=tuple(categories),
         category_matrix=matrix,
         legacy_fund_complete_from=int(legacy.get("fondo_completo_desde") or 1),
+        broker_question=broker["pregunta"],
+        ibkr_option=ibkr_option,
         legacy_capital=legacy_capital,
         legacy_horizon=legacy_horizon,
         source=source,

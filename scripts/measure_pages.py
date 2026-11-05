@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CSRF_PATTERN = re.compile(rb'name="csrf_token"\s+value="([^"]+)"')
 ERROR_FLASH = re.compile(rb'class="flash flash-error"[\s\S]*?class="flash__message">([^<]*)<')
 PASSWORD = "medicion-1"
-PROFILE_ANSWERS = {"k1": 3, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
+PROFILE_ANSWERS = {"k1": 3, "broker": 1, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
 USERS = {
     "novato": "novato@medicion.local",
     "inversionista": "inversionista@medicion.local",

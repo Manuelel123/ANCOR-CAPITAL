@@ -5,7 +5,7 @@
   <header class="page-header">
     <div>
       <p class="eyebrow">Guía educativa</p>
-      <h1>Abre tu cuenta en Interactive Brokers</h1>
+      <h1>{{ 'Tu cuenta en Interactive Brokers' if has_account else 'Abre tu cuenta en Interactive Brokers' }}</h1>
       <p class="lead">{{ guide.referencia }}</p>
       <p class="help-text">Verificado el {{ guide.verificado }}. Las cifras pueden cambiar: verifica en IBKR.</p>
     </div>
@@ -19,7 +19,9 @@
     <p class="notice notice--warning" role="note"><strong>{{ guide.aviso_comision }}</strong></p>
   {% endif %}
 
-  {% if low_capital %}
+  {% if has_account %}
+    <p class="notice notice--info" role="note">{{ guide.ya_tiene_cuenta }}</p>
+  {% elif low_capital %}
     <section class="card account-section" aria-labelledby="capital-titulo">
       <header class="card__header"><div><h2 class="card__title" id="capital-titulo">{{ guide.capital.bajo.ejemplos_titulo }}</h2></div></header>
       <div class="card__body">
@@ -62,9 +64,9 @@
   <section class="section" aria-labelledby="pasos-titulo">
     <div class="section__header">
       <p class="eyebrow">Paso a paso</p>
-      <h2 id="pasos-titulo">De cero a tu primera compra</h2>
+      <h2 id="pasos-titulo">{{ 'Lo que sigue con tu cuenta' if has_account else 'De cero a tu primera compra' }}</h2>
     </div>
-    {% for step in guide.pasos %}
+    {% for step in steps %}
       <article class="card account-section">
         <header class="card__header"><div><h3 class="card__title">{{ loop.index }}. {{ step.titulo }}</h3></div></header>
         <div class="card__body">

@@ -6,7 +6,12 @@ from dataclasses import dataclass
 
 from flask import current_app
 
-from optimizacion_portafolios.profiling import already_invests, category_for, emergency_fund_complete
+from optimizacion_portafolios.profiling import (
+    already_invests,
+    category_for,
+    emergency_fund_complete,
+    has_ibkr_account,
+)
 from optimizacion_portafolios.profiling.questionnaire import Category, Questionnaire
 from optimizacion_portafolios.storage.models import Profile
 from optimizacion_portafolios.web.guia.content import load_instruments
@@ -21,6 +26,7 @@ class Journey:
     invests: bool
     capital_level: str | None
     fund_complete: bool
+    has_ibkr: bool
     steps: tuple[dict, ...]
     contribution: str | None
 
@@ -55,7 +61,10 @@ def build_journey(profile: Profile) -> Journey:
     category = category_for(questionnaire, profile.perfil_final, answers)
     invests = already_invests(questionnaire, answers)
     capital_level = _capital_level(questionnaire, profile)
+    has_ibkr = has_ibkr_account(questionnaire, answers)
     step_ids = list(catalog["recorrido"][category.id])
+    if has_ibkr:
+        step_ids = ["guia_cuenta" if step_id == "guia" else step_id for step_id in step_ids]
     if invests:
         step_ids.insert(0, "hrp_libre")
     elif _highlights_hrp(questionnaire, catalog, capital_level):
@@ -65,6 +74,7 @@ def build_journey(profile: Profile) -> Journey:
         invests=invests,
         capital_level=capital_level,
         fund_complete=emergency_fund_complete(questionnaire, profile.version_cuestionario, answers),
+        has_ibkr=has_ibkr,
         steps=tuple(catalog["pasos"][step_id] for step_id in step_ids),
         contribution=_contribution(questionnaire, profile),
     )
@@ -79,4 +89,5 @@ def options_for(journey: Journey) -> list[dict]:
         if journey.category.id in instrument["categorias"]
         and (journey.capital_level is None or journey.capital_level in instrument["capital"])
         and (journey.fund_complete or instrument["riesgo_bajo"])
+        and not (journey.has_ibkr and instrument.get("apertura_ibkr"))
     ]

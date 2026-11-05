@@ -22,6 +22,7 @@ _TEXT_FIELDS = (
     "estado_referido.con_acuerdo",
     "aviso_comision",
     "alternativa",
+    "ya_tiene_cuenta",
     "capital.bajo.nota",
     "capital.bajo.ejemplos_titulo",
     "capital.bajo.ejemplos_nota",

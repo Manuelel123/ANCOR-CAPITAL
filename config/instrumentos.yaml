@@ -31,6 +31,10 @@ pasos:
     titulo: Conoce cómo abrir una cuenta en un broker
     descripcion: El broker de referencia, paso a paso.
     destino: guia.interactive_brokers
+  guia_cuenta:
+    titulo: Sigue con tu cuenta de Interactive Brokers
+    descripcion: Tu primera compra y lo que debes hacer después.
+    destino: guia.interactive_brokers
   hrp_guiado:
     titulo: Arma un ejemplo guiado con HRP
     descripcion: Atlas te acompaña y te explica por qué cada activo pesa lo que pesa.
@@ -109,6 +113,7 @@ instrumentos:
     riesgo: Según lo que compres
     liquidez: Se vende en bolsa; traer el dinero tarda días
     riesgo_bajo: false
+    apertura_ibkr: true  # no se muestra a quien ya tiene esa cuenta
     categorias: [intermedio, avanzado]
     capital: [medio, alto]
     fuente:

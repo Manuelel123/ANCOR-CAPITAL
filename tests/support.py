@@ -78,7 +78,7 @@ def create_test_user(
 # Complete answers of a "moderado" profile (6 of 9 points) with an emergency fund.
 TEST_PROFILE_CAPITAL = "5m_30m"
 TEST_PROFILE_HORIZON = "mas_5"
-TEST_PROFILE_ANSWERS = {"k1": 3, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
+TEST_PROFILE_ANSWERS = {"k1": 3, "broker": 1, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
 
 
 def add_test_profile(app, user_id, *, capital=TEST_PROFILE_CAPITAL, horizon=TEST_PROFILE_HORIZON, answers=None):

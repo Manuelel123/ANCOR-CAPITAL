@@ -16,6 +16,7 @@ from optimizacion_portafolios.profiling import (
     emergency_fund_complete,
     evaluate,
     explain,
+    has_ibkr_account,
     level_for_score,
     load_questionnaire,
     parse_questionnaire,
@@ -31,7 +32,7 @@ CAPITALS = ("menos_50k", "50k_200k", "200k_1m", "1m_5m", "5m_30m", "mas_30m")
 
 def answers(**overrides):
     """Complete answers with a full emergency fund (nothing overrides the score)."""
-    return {"k1": 3, "aporte": 3, "p2": 2, "p1": 3, "p6": 1, **overrides}
+    return {"k1": 3, "broker": 1, "aporte": 3, "p2": 2, "p1": 3, "p6": 1, **overrides}
 
 
 class QuestionnaireFileTests(unittest.TestCase):
@@ -41,7 +42,7 @@ class QuestionnaireFileTests(unittest.TestCase):
         self.assertEqual(q.level_ids, ("adverso", "moderado", "arriesgado"))
         self.assertEqual(q.level("adverso").label, "Conservador")
         self.assertEqual([block.layout for block in q.blocks], [
-            ("k1", "capital_rango", "aporte"), ("horizonte", "p2", "p1"), ("p6",),
+            ("k1", "broker", "capital_rango", "aporte"), ("horizonte", "p2", "p1"), ("p6",),
         ])
         self.assertEqual(q.question("k1").options, (
             "Solo la gasto", "Solo ahorro (cuenta, CDT, natillera)", "Invierto en fondos",
@@ -52,7 +53,8 @@ class QuestionnaireFileTests(unittest.TestCase):
         ))
         self.assertEqual(q.question("p1").options, ("Vendería todo", "Vendería una parte", "Esperaría", "Invertiría más"))
         self.assertEqual(q.question("p6").options, ("Sí", "Parcialmente", "No"))
-        self.assertEqual(len(q.question_ids), 5)
+        self.assertEqual(len(q.question_ids), 6)
+        self.assertEqual(q.question("broker").options, ("No", "Sí, en Interactive Brokers", "Sí, en otro broker"))
         self.assertEqual([choice.id for choice in q.capital_options], list(CAPITALS))
         self.assertEqual([choice.id for choice in q.horizon_options], list(HORIZONS))
         self.assertEqual({(veto.question, veto.option_text) for veto in q.vetoes},
@@ -98,7 +100,7 @@ class QuestionnaireFileTests(unittest.TestCase):
             lambda d: d["factor_limitante"]["explicaciones"].update(tolerancia="{desconocido}")))
         self.assertIn("repetido", self._broken(lambda d: d["bloques"][1]["preguntas"][1].update(id="k1")))
         self.assertIn("nivel", self._broken(lambda d: d["datos_previos"]["capital"]["opciones"][0].pop("nivel")))
-        self.assertIn("ubicar", self._broken(lambda d: d["bloques"][0]["preguntas"].pop(1)))
+        self.assertIn("ubicar", self._broken(lambda d: d["bloques"][0]["preguntas"].pop(2)))
         self.assertIn("puntaje.preguntas", self._broken(lambda d: d["puntaje"]["preguntas"].append("p9")))
 
     def test_missing_or_malformed_yaml(self):
@@ -222,6 +224,25 @@ class CategoryTests(unittest.TestCase):
         data = copy.deepcopy(RAW)
         data["categorias"]["matriz"]["ya_invierte"]["moderado"] = "experto"
         with self.assertRaisesRegex(QuestionnaireError, "categorias.matriz.ya_invierte.moderado"):
+            parse_questionnaire(data, source="prueba.yaml")
+
+
+class BrokerAccountTests(unittest.TestCase):
+    def test_only_interactive_brokers_counts(self):
+        cases = {1: False, 2: True, 3: False}
+        for option, expected in cases.items():
+            self.assertEqual(has_ibkr_account(QUESTIONNAIRE, {"broker": option}), expected, option)
+        self.assertFalse(has_ibkr_account(QUESTIONNAIRE, {"k1": 3}))  # earlier profiles
+
+    def test_it_does_not_change_the_profile(self):
+        base = evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers())
+        result = evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers(broker=2))
+        self.assertEqual((result.final_level, result.scores), (base.final_level, base.scores))
+
+    def test_the_option_must_exist(self):
+        data = copy.deepcopy(RAW)
+        data["cuenta_broker"]["opcion_ibkr"] = "Sí, en otro"
+        with self.assertRaisesRegex(QuestionnaireError, "cuenta_broker"):
             parse_questionnaire(data, source="prueba.yaml")
 
 

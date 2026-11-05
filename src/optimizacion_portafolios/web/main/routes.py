@@ -182,10 +182,13 @@ def index():
     step = pending_profile_step(current_user)
     tools = [] if step else [tool for tool in TOOLS if can_open(tool["endpoint"])]
     saved_profile = get_current_profile(current_user.id)
+    journey = build_journey(saved_profile) if saved_profile else None
+    if journey and journey.has_ibkr:  # the card is for opening the account
+        tools = [tool for tool in tools if tool["key"] != "guide"]
     return render_template(
         "main/dashboard.html",
         profile=current_profile(),
-        journey=build_journey(saved_profile) if saved_profile else None,
+        journey=journey,
         pending_step=step,
         role_label=role_label(current_user.role),
         role_summary=ROLE_SUMMARIES.get(current_user.role, ""),
