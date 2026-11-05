@@ -6,7 +6,7 @@
     <div>
       <p class="eyebrow">Cuenta</p>
       <h1>Mi perfil</h1>
-      <p class="lead">Tu perfil de riesgo vigente: <strong>{{ view.final_label }}</strong>, calculado el {{ view.profile.fecha|datetime_short }}. Rol: {{ role_label }}.</p>
+      {% if is_gestor %}<p class="lead">Tu perfil de riesgo vigente: <strong>{{ view.final_label }}</strong>, calculado el {{ view.profile.fecha|datetime_short }}. Rol: {{ role_label }}.</p>{% endif %}
     </div>
     <div class="page-header__actions">
       <a class="button button-secondary" href="{{ url_for('decisions.history') }}">Mi historial de decisiones</a>
@@ -15,13 +15,28 @@
   {{ disclaimer_notice(disclaimer) }}
 
   <div class="manage-grid">
-    <section class="card" aria-labelledby="perfil-vigente">
-      <header class="card__header"><div><h2 class="card__title" id="perfil-vigente">Perfil vigente</h2><p class="card__subtitle">{{ view.final_description }}</p></div></header>
-      <div class="card__body form-stack">
-        {{ limiting_factor(view) }}
-      </div>
-      {{ profile_summary(view) }}
-    </section>
+    {% if is_gestor %}
+      <section class="card" aria-labelledby="perfil-vigente">
+        <header class="card__header"><div><h2 class="card__title" id="perfil-vigente">Perfil vigente</h2><p class="card__subtitle">{{ view.final_description }}</p></div></header>
+        <div class="card__body form-stack">
+          {{ limiting_factor(view) }}
+        </div>
+        {{ profile_summary(view) }}
+      </section>
+    {% else %}
+      <section class="card" aria-labelledby="tus-datos">
+        <header class="card__header"><div><h2 class="card__title" id="tus-datos">Tus datos</h2></div></header>
+        <dl class="metric-list">
+          <div><dt>Nombre</dt><dd>{{ current_user.name }}</dd></div>
+          <div><dt>Correo</dt><dd>{{ current_user.email }}</dd></div>
+          <div><dt>Perfil de inversionista</dt><dd>{{ view.final_label }}</dd></div>
+          {% if journey %}<div><dt>Categoría</dt><dd>{{ journey.category.label }}</dd></div>{% endif %}
+        </dl>
+        {% if journey %}
+          <div class="card__footer"><a class="button button-primary" href="{{ url_for('guia.options') }}">Ver opciones para tu perfil</a></div>
+        {% endif %}
+      </section>
+    {% endif %}
 
     <section class="card" aria-labelledby="repetir-titulo">
       <header class="card__header"><div><h2 class="card__title" id="repetir-titulo">Repetir el cuestionario</h2><p class="card__subtitle">Si cambió tu situación o tu forma de ver el riesgo</p></div></header>
@@ -35,6 +50,17 @@
       </form>
     </section>
   </div>
+
+  {% if not is_gestor %}
+    <details class="card account-section">
+      <summary class="card__header"><span class="card__title">Ver el detalle de mi perfil vigente</span></summary>
+      <div class="card__body form-stack">
+        <p>{{ view.final_description }}</p>
+        {{ limiting_factor(view) }}
+      </div>
+      {{ profile_summary(view) }}
+    </details>
+  {% endif %}
 
   {% if history|length > 1 %}
     <section class="card account-section" aria-labelledby="historial-perfil">

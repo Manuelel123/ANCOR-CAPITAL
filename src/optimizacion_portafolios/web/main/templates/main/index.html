@@ -8,7 +8,7 @@
     <div class="hero__copy">
       <p class="eyebrow">Laboratorio educativo de portafolios</p>
       <h1 id="hero-title" class="hero__title">Aprende a construir portafolios con <span class="text-accent">método</span>, no con intuición.</h1>
-      <p class="hero__lead">Atlas es una herramienta para aprender cómo se reparte el dinero entre varios activos y por qué. Está pensada para personas jóvenes que están empezando y quieren entender la diversificación, el riesgo y dos métodos usados por profesionales: Hierarchical Risk Parity y Black-Litterman.</p>
+      <p class="hero__lead">Atlas es una herramienta para aprender cómo se reparte el dinero entre varios activos y por qué. Está pensada para personas jóvenes que están empezando y quieren entender la diversificación, el riesgo y un método usado por profesionales: Hierarchical Risk Parity.</p>
       {{ educational_notice("Atlas usa datos históricos y modelos con supuestos: sirve para aprender, no para decidir en qué invertir.") }}
       <div class="hero__actions">
         <a class="button button-primary" href="{{ url_for('auth.register') }}">Crear cuenta gratis <span class="arrow" aria-hidden="true">→</span></a>
@@ -78,7 +78,7 @@
   <section class="section" aria-labelledby="method-title">
     <div class="section__header">
       <p class="eyebrow">Qué vas a aprender</p>
-      <h2 id="method-title">Dos enfoques complementarios</h2>
+      <h2 id="method-title">Un método para repartir el riesgo</h2>
       <p>Uno no necesita pronosticar retornos; el otro parte de lo que el mercado ya refleja. Los diagramas son ilustrativos, no resultados.</p>
     </div>
     <div class="method-grid">
@@ -94,23 +94,6 @@
           </svg>
         </div>
         <p class="method-card__text">Agrupa los activos que se mueven parecido y reparte el dinero de arriba hacia abajo, para que cada grupo aporte un riesgo comparable. No intenta adivinar qué subirá más.</p>
-      </article>
-      <article class="method-card">
-        <div><p class="eyebrow">Equilibrio + views</p><h3 class="method-card__title">Black-Litterman</h3></div>
-        <div class="method-card__diagram" aria-hidden="true">
-          <svg viewBox="0 0 300 140" focusable="false">
-            <rect class="diagram__node" x="8" y="14" width="112" height="44" rx="8"/>
-            <text class="diagram__text" x="64" y="40" text-anchor="middle">Equilibrio</text>
-            <rect class="diagram__node" x="8" y="82" width="112" height="44" rx="8"/>
-            <text class="diagram__text" x="64" y="108" text-anchor="middle">Views</text>
-            <path class="diagram__line" d="M120 36h40q12 0 12 12v14M120 104h40q12 0 12-12V78"/>
-            <path class="diagram__line diagram__line--accent" d="M172 70h26"/>
-            <path class="diagram__arrowhead" d="m207 70-9-5v10z"/>
-            <rect class="diagram__node diagram__node--accent" x="208" y="46" width="84" height="48" rx="8"/>
-            <text class="diagram__text diagram__text--accent" x="250" y="74" text-anchor="middle">Portafolio</text>
-          </svg>
-        </div>
-        <p class="method-card__text">Parte del peso que el mercado le da a cada activo por su tamaño, lo combina con opiniones (views) y busca el mejor retorno esperado por unidad de riesgo.</p>
       </article>
     </div>
   </section>

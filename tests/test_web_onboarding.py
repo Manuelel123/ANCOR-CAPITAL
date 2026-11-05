@@ -31,6 +31,7 @@ NOTICE_PATH = "/aviso-datos"
 INTRO_PATH = "/introduccion"
 GUIDE_PATH = "/guia/interactive-brokers"
 OPTIONS_PATH = "/guia/opciones"
+DETAIL_CARD = '<details class="card'
 
 
 def path_of(response) -> str:
@@ -429,6 +430,30 @@ class LanguageTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8").lower()
             for forbidden in ("recomendamos", "te recomendamos", "invierte aquí"):
                 self.assertNotIn(forbidden, text, path.name)
+
+
+class MyProfileTests(OnboardingTestCase):
+    def test_it_shows_the_important_data_first_and_the_detail_on_demand(self):
+        self.sign_in(display_name="Nueva")
+        html = self.client.get("/perfil/").get_data(as_text=True)
+        for text in ("Nueva", "nueva@example.com", "Perfil de inversionista", "Moderado", "Categoría", "Avanzado"):
+            self.assertIn(text, html)
+        self.assertIn(DETAIL_CARD, html)
+        self.assertIn("Ver el detalle de mi perfil vigente", html)
+        self.assertLess(html.index("Tus datos"), html.index(DETAIL_CARD))
+        self.assertLess(html.index(DETAIL_CARD), html.index("Factor limitante"))
+
+    def test_the_old_sentence_and_the_role_button_are_gone(self):
+        self.sign_in()
+        html = self.client.get("/perfil/").get_data(as_text=True)
+        self.assertNotIn("Tu perfil de riesgo vigente", html)
+        self.assertNotIn("Cambiar rol", html)
+
+    def test_the_gestor_keeps_the_page_as_it_was(self):
+        self.sign_in("jefa@example.com", role="gestor", role_confirmed=True)
+        html = self.client.get("/perfil/").get_data(as_text=True)
+        self.assertIn("Tu perfil de riesgo vigente", html)
+        self.assertNotIn(DETAIL_CARD, html)
 
 
 class ProfileRulesTests(OnboardingTestCase):

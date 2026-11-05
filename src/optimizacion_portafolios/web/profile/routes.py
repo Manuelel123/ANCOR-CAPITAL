@@ -287,10 +287,12 @@ def mine():
         return redirect(url_for("profile.questionnaire"))
     questionnaire = get_questionnaire()
     history = list_profiles(current_user.id)
+    journey = None if _is_gestor() else build_journey(profile)
     labels = {level.id: level.label for level in questionnaire.levels}
     return render_template(
         "profile/mine.html",
         view=_profile_view(questionnaire, profile),
+        journey=journey,
         disclaimer=DISCLAIMER,
         history=history,
         level_labels=labels,

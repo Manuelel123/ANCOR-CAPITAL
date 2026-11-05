@@ -157,7 +157,7 @@ def index():
     if not current_user.is_authenticated:
         stats = (
             {"value": catalog_asset_count(), "label": "activos e índices en catálogo"},
-            {"value": MODEL_COUNT, "label": "métodos de construcción de portafolios"},
+            {"value": 1, "label": "método de construcción de portafolios"},
             {"value": DATA_SOURCE_COUNT, "label": "fuentes de datos de mercado"},
         )
         return render_template(
