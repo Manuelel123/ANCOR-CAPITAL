@@ -1,11 +1,12 @@
-# Render Blueprint: the Ancor Capital web service (Docker image).
-# Render dashboard > New > Blueprint > this repository. Values marked
-# "sync: false" are asked for when the Blueprint is created.
-# The Postgres is created apart and is not declared here: a sync would create
-# an empty database and point DATABASE_URL at it.
+# Render settings of the Ancor Capital web service (Docker image).
+# The live service is not connected to a Blueprint; this file documents it and
+# can create a new one: Render dashboard > New > Blueprint > this repository.
+# Values marked "sync: false" are asked for when the Blueprint is created.
+# The Postgres (ATLAS-db) is created apart and is not declared here: a sync
+# would create an empty database and point DATABASE_URL at it.
 services:
   - type: web
-    name: atlas
+    name: ANCOR-CAPITAL
     runtime: docker
     dockerfilePath: ./Dockerfile
     # 512 MB ran out of memory on HRP and Black-Litterman.
@@ -22,13 +23,13 @@ services:
       # Render's proxy sits in front of the app (client IP for the sign-in throttle).
       - key: ATLAS_PROXY_HOPS
         value: "1"
-      # Skip the vectorbt warm-up to stay under the free plan's 512 MB.
+      # Skip the vectorbt warm-up: the first backtest compiles it instead.
       - key: ATLAS_VECTORBT_WARMUP
         value: "0"
-      # Verification codes go through Brevo's API: the free plan blocks SMTP.
+      # Verification codes go through Brevo's API.
       - key: BREVO_API_KEY
         sync: false
-      # Sender verified in Brevo, e.g. "Atlas <you@gmail.com>".
+      # Sender verified in Brevo, e.g. "Ancor Capital <you@gmail.com>".
       - key: MAIL_FROM
         sync: false
       - key: INSFORGE_URL

@@ -227,12 +227,14 @@ Configura `FLASK_SECRET_KEY` con un valor aleatorio secreto al desplegar y habil
 
 ## Despliegue en Render (imagen Docker)
 
-El `Dockerfile` construye una imagen con Python 3.14, las dependencias de `uv.lock` y Waitress; al arrancar aplica las migraciones y escucha en `$PORT`. `render.yaml` es un Blueprint de Render que crea el servicio web (runtime Docker). La base Postgres se crea aparte y no se declara ahí: una sincronización crearía una base vacía y apuntaría `DATABASE_URL` hacia ella.
+El `Dockerfile` construye una imagen con Python 3.14, las dependencias de `uv.lock` y Waitress; al arrancar aplica las migraciones y escucha en `$PORT`. La app corre en el servicio web `ANCOR-CAPITAL` (`https://ancor-capital.onrender.com`, plan de 1 CPU y 2 GB), conectado a la rama `main`, con la base `ATLAS-db`. Ese servicio no está conectado a un Blueprint; `render.yaml` documenta su configuración y sirve para crear uno nuevo. La base se crea aparte y no se declara ahí: una sincronización crearía una base vacía y apuntaría `DATABASE_URL` hacia ella.
+
+Para crear un entorno nuevo desde cero:
 
 1. Crea la base en Render: **New → Postgres**, en la región del servicio, y copia su **Internal Database URL**.
 2. Sube la rama a GitHub. En Render: **New → Blueprint**, elige este repositorio y la rama.
 3. Render pide los valores marcados `sync: false`: `DATABASE_URL` (la URL del paso 1), `BREVO_API_KEY` y `MAIL_FROM` (correo con Brevo, ver «Correo»), `INSFORGE_URL`, `INSFORGE_API_KEY` y `TIINGO_API_KEY` (los que no uses quedan vacíos). `FLASK_SECRET_KEY` se genera solo.
-4. Al terminar el despliegue, la app queda en `https://atlas-xxxx.onrender.com`, accesible desde cualquier dispositivo. La base empieza vacía: cada persona se registra de nuevo.
+4. Al terminar el despliegue, la app queda en una dirección `onrender.com`, accesible desde cualquier dispositivo. La base empieza vacía: cada persona se registra de nuevo.
 5. Para otorgar el rol gestor, abre la **Shell** del servicio en Render y ejecuta `flask --app wsgi:app users make-gestor tu-correo@example.com`.
 
 Variables propias del despliegue (ya definidas en `render.yaml`):
@@ -240,13 +242,13 @@ Variables propias del despliegue (ya definidas en `render.yaml`):
 - `DATABASE_URL` (se define al crear el Blueprint, no en `render.yaml`): Render entrega `postgres://…`; la app lo convierte para usar el driver `psycopg` (incluido en las dependencias).
 - `ATLAS_PROXY_HOPS=1`: número de proxies de confianza delante de la app. Con él, la IP del cliente (usada por el límite de intentos de inicio de sesión) y el esquema HTTPS se leen de `X-Forwarded-For`/`X-Forwarded-Proto`. No lo definas si la app recibe las peticiones directamente: cualquiera podría falsear su IP.
 - `FLASK_SESSION_COOKIE_SECURE=true`: cookies solo por HTTPS.
-- `ATLAS_VECTORBT_WARMUP=0`: no precompila vectorbt al arrancar, para quedar dentro de los 512 MB del plan gratis (la app usa unos 330 MB sin el precalentamiento y unos 420 MB con él). El primer backtest tarda unos segundos más.
+- `ATLAS_VECTORBT_WARMUP=0`: no precompila vectorbt al arrancar, para reducir la memoria al arrancar (unos 330 MB sin el precalentamiento y unos 420 MB con él). El primer backtest tarda unos segundos más.
 
-Limitaciones del plan gratis de Render:
+Consideraciones del despliegue:
 
-- **El servicio se duerme** tras 15 minutos sin visitas; la siguiente visita tarda cerca de un minuto en despertarlo.
-- **La base Postgres gratis vence a los 30 días**; para conservar los datos hay que pasarla a un plan pago antes.
-- **Render bloquea el SMTP saliente** (puertos 25, 465 y 587) en los servicios gratis; por eso `render.yaml` envía los códigos con Brevo (`BREVO_API_KEY`). Sin esa clave nadie puede terminar el registro.
+- **Render asigna la dirección al crear el servicio** y no permite cambiarla; para otra dirección hay que crear otro servicio o agregar un dominio propio.
+- **La base en plan gratis vence a los 30 días**; `ATLAS-db` debe mantenerse en un plan pago.
+- **Los correos salen por Brevo** (`BREVO_API_KEY`). Sin esa clave nadie puede terminar el registro.
 
 Para probar la imagen en local (requiere Docker):
 
