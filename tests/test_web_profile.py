@@ -69,7 +69,7 @@ class MandatoryProfileTests(ProfileTestCase):
         for rule in self.app.url_map.iter_rules():
             endpoint = rule.endpoint
             if (endpoint in {"static", "main.index", "auth.login", "auth.register", "auth.logout", "auth.verify", "auth.resend_verification", "auth.forgot_password", "auth.reset_password"}
-                    or endpoint.endswith(".static") or endpoint.startswith(("profile.", "onboarding."))
+                    or endpoint.endswith(".static") or endpoint.startswith(("profile.", "onboarding.", "guia."))
                     or "GET" not in rule.methods):
                 continue
             with self.app.test_request_context():

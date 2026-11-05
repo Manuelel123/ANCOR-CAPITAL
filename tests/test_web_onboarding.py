@@ -7,15 +7,19 @@ from urllib.parse import urlsplit
 
 import yaml
 
+import optimizacion_portafolios
 from optimizacion_portafolios.profiling.avisos import DEFAULT_PATH, NoticesError, load_notices, parse_notices
 from optimizacion_portafolios.storage import db
 from optimizacion_portafolios.storage.users import get_user_by_email
 from optimizacion_portafolios.web import create_app
+from optimizacion_portafolios.web.guia.content import DEFAULT_PATH as GUIDE_FILE
+from optimizacion_portafolios.web.guia.content import GuideError, load_guide, parse_guide
 from support import TEST_PASSWORD, add_test_profile, create_test_user, csrf_from, login_session
 
 DISCLAIMER = "Información educativa. No es recomendación de inversión ni asesoría financiera."
 NOTICE_PATH = "/aviso-datos"
 INTRO_PATH = "/introduccion"
+GUIDE_PATH = "/guia/interactive-brokers"
 
 
 def path_of(response) -> str:
@@ -153,6 +157,152 @@ class IntroductionTests(OnboardingTestCase):
         self.assertEqual(self.client.get("/").status_code, 200)
         html = self.client.get(INTRO_PATH).get_data(as_text=True)
         self.assertIn(DISCLAIMER, html)
+
+
+class GuideTests(OnboardingTestCase):
+    LOW_NOTE = "no es el camino principal"
+    LOW_EXAMPLE = "FIC600 de Banco Agrario"
+    MEDIUM_NOTE = "es el camino para acciones y ETF"
+    COMMISSION = "Atlas puede recibir una comisión"
+
+    def guide_for(self, capital, email="guia@example.com"):
+        user_id = self.sign_in(email, profile=False, role_confirmed=True)
+        add_test_profile(self.app, user_id, capital=capital)
+        return self.client.get(GUIDE_PATH).get_data(as_text=True)
+
+    def test_it_opens_for_the_three_roles(self):
+        for role in ("novato", "inversionista", "gestor"):
+            with self.subTest(role=role):
+                self.client = self.app.test_client()
+                self.sign_in(f"{role}@example.com", role=role, role_confirmed=True)
+                response = self.client.get(GUIDE_PATH)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(DISCLAIMER, response.get_data(as_text=True))
+
+    def test_without_a_session_it_goes_to_sign_in(self):
+        response = self.client.get(GUIDE_PATH)
+        self.assertEqual(path_of(response), "/auth/ingresar")
+
+    def test_it_needs_the_data_notice(self):
+        self.sign_in(notice=False)
+        self.assertEqual(path_of(self.client.get(GUIDE_PATH)), NOTICE_PATH)
+
+    def test_it_opens_from_the_result_page_before_the_role_is_confirmed(self):
+        user_id = self.sign_in(profile=False)
+        add_test_profile(self.app, user_id)
+        self.assertIn(GUIDE_PATH, self.client.get("/perfil/resultado").get_data(as_text=True))
+        self.assertEqual(self.client.get(GUIDE_PATH).status_code, 200)
+
+    def test_it_is_linked_from_the_menu_and_the_home_page(self):
+        self.sign_in()
+        html = self.client.get("/").get_data(as_text=True)
+        self.assertIn(f'href="{GUIDE_PATH}"', html)
+        self.assertIn('data-module="guide"', html)
+
+    def test_low_capital_changes_the_message_but_not_the_guide(self):
+        for capital in ("menos_50k", "50k_200k", "200k_1m", "1m_5m"):
+            with self.subTest(capital=capital):
+                self.client = self.app.test_client()
+                html = self.guide_for(capital, f"{capital}@example.com")
+                self.assertIn(self.LOW_NOTE, html)
+                self.assertIn(self.LOW_EXAMPLE, html)
+                self.assertIn("Verifica con la entidad", html)
+                self.assertNotIn(self.MEDIUM_NOTE, html)
+                self.assertIn("Primera compra", html)
+
+    def test_medium_and_high_capital_do_not_get_the_low_capital_note(self):
+        for capital in ("5m_30m", "mas_30m"):
+            with self.subTest(capital=capital):
+                self.client = self.app.test_client()
+                html = self.guide_for(capital, f"{capital}@example.com")
+                self.assertNotIn(self.LOW_NOTE, html)
+                self.assertNotIn(self.LOW_EXAMPLE, html)
+                self.assertIn(self.MEDIUM_NOTE, html)
+
+    def test_it_always_shows_criteria_agreement_alternative_and_open_questions(self):
+        html = self.guide_for("mas_30m")
+        guide = load_guide()
+        for text in (guide["referencia"], "SEC y FINRA", "Sin depósito mínimo", "más de 150 mercados",
+                     guide["estado_referido"]["sin_acuerdo"], "Trii", "Por confirmar", "por transferencia",
+                     "Verificado el 2026-11-04", "verifica en IBKR"):
+            self.assertIn(text, html)
+        for source in guide["fuentes"]:
+            self.assertIn(source["url"], html)
+        for step in guide["pasos"]:
+            self.assertIn(step["por_que"], html)
+
+    def test_the_link_is_the_official_one_without_a_referral_code(self):
+        self.assertIn('href="https://www.interactivebrokers.com"', self.guide_for("mas_30m"))
+
+    def test_no_commission_notice_while_there_is_no_agreement(self):
+        html = self.guide_for("mas_30m")
+        self.assertNotIn(self.COMMISSION, html)
+        self.assertNotIn("acuerdo de referido", html)
+
+    def test_the_commission_notice_shows_only_with_an_agreement(self):
+        data = yaml.safe_load(GUIDE_FILE.read_text(encoding="utf-8"))
+        data["referido_ibkr"] = True
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "guia.yaml"
+            path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+            self.app = create_app({"TESTING": True, "SECRET_KEY": "x", "GUIA_IBKR_PATH": str(path)})
+            self.client = self.app.test_client()
+            html = self.guide_for("mas_30m")
+        self.assertIn(self.COMMISSION, html)
+        self.assertIn("acuerdo de referido", html)
+
+
+class GuideFileTests(unittest.TestCase):
+    def data(self):
+        return yaml.safe_load(GUIDE_FILE.read_text(encoding="utf-8"))
+
+    def test_the_shipped_file_is_valid_and_has_no_agreement(self):
+        guide = load_guide()
+        self.assertIs(guide["referido_ibkr"], False)
+        self.assertEqual(len(guide["pasos"]), 8)
+        self.assertEqual(len(guide["por_confirmar"]["puntos"]), 4)
+
+    def test_a_missing_field_names_it(self):
+        data = self.data()
+        del data["pasos"][2]["por_que"]
+        with self.assertRaisesRegex(GuideError, "por_que.*pasos.*3"):
+            parse_guide(data)
+        data = self.data()
+        del data["capital"]["bajo"]["nota"]
+        with self.assertRaisesRegex(GuideError, "capital.bajo.nota"):
+            parse_guide(data)
+
+    def test_the_flag_must_be_a_boolean(self):
+        data = self.data()
+        data["referido_ibkr"] = "no"
+        with self.assertRaisesRegex(GuideError, "referido_ibkr"):
+            parse_guide(data)
+
+    def test_a_referral_link_is_rejected(self):
+        data = self.data()
+        data["enlace_oficial"] = "https://www.interactivebrokers.com/?ref=atlas"
+        with self.assertRaisesRegex(GuideError, "enlace_oficial"):
+            parse_guide(data)
+
+    def test_the_app_does_not_start_with_an_invalid_file(self):
+        data = self.data()
+        del data["fuentes"]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "guia.yaml"
+            path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+            with self.assertRaisesRegex(GuideError, "fuentes"):
+                create_app({"TESTING": True, "SECRET_KEY": "x", "GUIA_IBKR_PATH": str(path)})
+
+
+class LanguageTests(unittest.TestCase):
+    def test_new_texts_do_not_recommend(self):
+        web = Path(optimizacion_portafolios.__file__).parent / "web"
+        files = [DEFAULT_PATH, GUIDE_FILE, *(web / "onboarding").rglob("*.html"), *(web / "guia").rglob("*.html")]
+        self.assertGreaterEqual(len(files), 5)
+        for path in files:
+            text = path.read_text(encoding="utf-8").lower()
+            for forbidden in ("recomendamos", "te recomendamos", "invierte aquí"):
+                self.assertNotIn(forbidden, text, path.name)
 
 
 class ProfileRulesTests(OnboardingTestCase):

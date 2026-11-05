@@ -19,6 +19,7 @@
       <header class="card__header"><div><h2 class="card__title" id="resumen-perfil">Resumen</h2><p class="card__subtitle">El perfil final es el más bajo entre tolerancia, capacidad y horizonte</p></div></header>
       <div class="card__body form-stack">
         {{ limiting_factor(view) }}
+        <p><a href="{{ url_for('guia.interactive_brokers') }}">Mira cómo abrir una cuenta en el broker de referencia</a></p>
       </div>
       {{ profile_summary(view) }}
     </section>

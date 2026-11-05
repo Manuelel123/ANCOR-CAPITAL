@@ -111,6 +111,13 @@ TOOLS = (
         "description": "Cada portafolio que generaste, con fecha, perfil vigente, método, pesos y supuestos.",
     },
     {
+        "key": "guide",
+        "endpoint": "guia.interactive_brokers",
+        "eyebrow": "Guía",
+        "title": "Abrir cuenta en Interactive Brokers",
+        "description": "El broker de referencia, paso a paso: qué hacer, por qué importa y qué falta confirmar.",
+    },
+    {
         "key": "glossary",
         "endpoint": "main.glossary",
         "eyebrow": "Aprende",

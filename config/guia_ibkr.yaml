@@ -1,0 +1,120 @@
+# Guía educativa para abrir cuenta en Interactive Brokers (la lee
+# optimizacion_portafolios.web.guia). Todo el contenido vive aquí, no en la plantilla.
+#
+# Las cifras vienen de fuentes de terceros y pueden cambiar: actualiza
+# `verificado` cada vez que las revises.
+
+# Hoy no hay acuerdo con IBKR. Si algún día es true, la página muestra
+# `aviso_comision`. Mientras sea false no se muestra ni insinúa ninguna comisión.
+referido_ibkr: false
+
+verificado: '2026-11-04'
+enlace_oficial: https://www.interactivebrokers.com
+
+referencia: Interactive Brokers es el broker de referencia de esta guía, no una recomendación personalizada.
+
+criterio:
+  titulo: Por qué es la referencia
+  puntos:
+    - Regulado por la SEC y FINRA.
+    - Sin depósito mínimo.
+    - Acceso a más de 150 mercados.
+
+estado_referido:
+  sin_acuerdo: Hoy Atlas no tiene ningún acuerdo con Interactive Brokers.
+  con_acuerdo: Atlas tiene un acuerdo de referido con Interactive Brokers.
+aviso_comision: Atlas puede recibir una comisión si abres tu cuenta desde esta guía.
+
+alternativa: Si prefieres la Bolsa de Colombia, una alternativa es Trii.
+
+# Mensaje según el capital del perfil vigente. Nunca esconde la guía.
+capital:
+  bajo:
+    nota: >-
+      Con montos bajos, Interactive Brokers no es el camino principal: la fuente
+      dice que no conviene por debajo de unos US$100 al mes. Hay instrumentos
+      pensados para empezar con montos pequeños.
+    ejemplos_titulo: Ejemplos para empezar con montos pequeños
+    ejemplos:
+      - nombre: FIC600 de Banco Agrario
+        desde: Desde $1.000
+      - nombre: Fondo BBVA Digital
+        desde: Desde $20.000
+      - nombre: Plan Semilla de Bancolombia
+        desde: Desde $50.000
+      - nombre: Renta Futuro de Bancolombia
+        desde: Desde $50.000
+    ejemplos_nota: Verifica con la entidad.
+    ejemplos_fuente: Portafolio
+    ejemplos_verificado: '2026-11-04'
+  medio_alto:
+    nota: Con el capital que indicaste, esta guía es el camino para acciones y ETF.
+
+pasos:
+  - titulo: Preparar
+    que_hacer: Cédula vigente (frente y reverso), comprobante de domicilio a tu nombre de menos de 3 a 6 meses, correo y celular activos.
+    por_que: Sin esto la verificación se rechaza.
+  - titulo: Crear el usuario
+    que_hacer: País Colombia, cuenta individual tipo Cash.
+    por_que: Cash significa que no puedes invertir dinero prestado.
+  - titulo: Datos personales
+    que_hacer: Tu nombre exactamente como sale en la cédula.
+    por_que: Las diferencias de datos son la causa principal de demoras.
+  - titulo: Cuestionario y W-8BEN
+    que_hacer: Responde el perfil financiero y firma digitalmente el formulario W-8BEN.
+    por_que: Certifica ante EE. UU. que no eres residente fiscal de ese país.
+    advertencia: Caduca y hay que renovarlo.
+  - titulo: Verificar identidad
+    que_hacer: Sube fotos legibles con los cuatro bordes visibles.
+    por_que: Las fotos borrosas o cortadas provocan rechazos. La aprobación tarda de 1 a 3 días hábiles.
+    advertencia: No uses VPN que cambie tu país.
+  - titulo: Fondear
+    que_hacer: >-
+      Transferencia internacional desde una cuenta a tu nombre, con la referencia
+      única que da el portal. Tarda de 1 a 4 días hábiles. Empieza con un envío de
+      prueba de US$100 a US$200.
+    por_que: Tu banco cobra el giro (unos $15.000 a $80.000 COP según el banco) y el cambio de divisa.
+    advertencia: No se aceptan tarjetas.
+  - titulo: Primera compra
+    que_hacer: >-
+      Entiende la diferencia entre orden de mercado (se ejecuta al precio del
+      momento) y orden límite (solo al precio que tú fijas). Empieza con un monto
+      pequeño.
+    por_que: Es donde más errores cometen quienes empiezan.
+    nota: Contenido educativo redactado por nosotros, no sale de las fuentes.
+  - titulo: Después
+    que_hacer: Renueva el W-8BEN cuando venza y declara tus inversiones en Colombia.
+    por_que: El W-8BEN no te exime de declarar ante la DIAN.
+
+datos_apoyo:
+  titulo: Datos de apoyo
+  puntos:
+    - Las cuentas de colombianos están con Interactive Brokers LLC (EE. UU.).
+    - Protección SIPC de hasta US$500.000 por cuenta.
+    - Sin depósito mínimo en cuenta Cash.
+    - Comisión de referencia de US$0,005 por acción, con mínimo de US$1 por orden.
+    - Sin cuota de mantenimiento.
+  contras_titulo: Contras
+  contras:
+    - Curva de aprendizaje pronunciada.
+    - Soporte a veces lento.
+
+# Lo que las fuentes no aclaran: no afirmes una cifra.
+por_confirmar:
+  titulo: Por confirmar
+  puntos:
+    - Si se pueden enviar pesos y convertirlos dentro de IBKR, o si solo se acepta USD por transferencia.
+    - Cuánto se retiene de impuesto sobre dividendos de EE. UU. (30 % por defecto; las fuentes no coinciden en cuánto lo reduce el W-8BEN).
+    - El umbral en UVT del reporte de activos en el exterior ante la DIAN.
+    - Qué plan (Lite o Pro) se ofrece a residentes en Colombia y su comisión real.
+
+fuentes:
+  - titulo: Cómo abrir cuenta en Interactive Brokers desde Colombia
+    url: https://finanzasplus.co/blog/como-abrir-cuenta-interactive-brokers-colombia
+    fecha: junio de 2026
+  - titulo: Interactive Brokers en Colombia, guía completa
+    url: https://finanzasplus.co/blog/interactive-brokers-colombia-guia-completa
+    fecha: abril de 2026
+  - titulo: Cómo declarar inversiones en el exterior ante la DIAN
+    url: https://finanzasplus.co/blog/como-declarar-inversiones-en-el-exterior-ante-la-dian-2026
+    fecha: junio de 2026

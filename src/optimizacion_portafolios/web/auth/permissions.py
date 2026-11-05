@@ -48,6 +48,7 @@ ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "main.glossary": EVERYONE,
     "onboarding.data_notice": EVERYONE,
     "onboarding.introduction": EVERYONE,
+    "guia.interactive_brokers": EVERYONE,
     "decisions.history": EVERYONE,
     "hrp.hrp": EVERYONE,
     "black_litterman.black_litterman": EVERYONE,

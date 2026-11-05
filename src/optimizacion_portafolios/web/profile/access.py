@@ -7,8 +7,9 @@
   (every role), then to the introduction the first time (not the ``gestor``),
   one without a current profile to the questionnaire, and one whose role is
   still unconfirmed (and is not ``gestor``) to the result page to confirm it.
-  The profiling pages (``profile.*``) are exempt from the last two; sign-out,
-  static files and the home page never reach the checks.
+  The profiling pages (``profile.*``) and the broker guide, linked from the
+  result page, are exempt from the last two; sign-out, static files and the
+  home page never reach the checks.
 - an after-sign-in hook (``web.auth.session.register_after_login``) that loads
   the saved profile into ``session["perfil"]`` and, when the profile or the
   role is missing, redirects there instead of ``next``.
@@ -39,6 +40,7 @@ ROLE_MESSAGE = "Confirma cómo quieres usar Atlas para continuar."
 DATA_NOTICE_ENDPOINT = "onboarding.data_notice"
 DATA_NOTICE_MESSAGE = "Antes de continuar, revisa y acepta el aviso de tratamiento de datos."
 INTRODUCTION_ENDPOINT = "onboarding.introduction"
+GUIDE_ENDPOINT = "guia.interactive_brokers"
 _EXTENSION_KEY = "questionnaire_path"
 _NOTICES_KEY = "avisos_path"
 
@@ -166,7 +168,7 @@ def require_current_profile(endpoint: str):
         return None
     if step == INTRODUCTION_ENDPOINT:
         return redirect(url_for(step))
-    if step != DATA_NOTICE_ENDPOINT and endpoint.startswith(PROFILE_ENDPOINT_PREFIX):
+    if step != DATA_NOTICE_ENDPOINT and (endpoint.startswith(PROFILE_ENDPOINT_PREFIX) or endpoint == GUIDE_ENDPOINT):
         return None
     message = {
         DATA_NOTICE_ENDPOINT: DATA_NOTICE_MESSAGE,

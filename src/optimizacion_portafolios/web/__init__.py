@@ -251,6 +251,7 @@ def _register_blueprints(app: Flask) -> None:
     from optimizacion_portafolios.web.black_litterman import bp as black_litterman_bp
     from optimizacion_portafolios.web.compare import bp as compare_bp
     from optimizacion_portafolios.web.decisions import bp as decisions_bp
+    from optimizacion_portafolios.web.guia import bp as guia_bp
     from optimizacion_portafolios.web.history import bp as history_bp
     from optimizacion_portafolios.web.hrp import bp as hrp_bp
     from optimizacion_portafolios.web.main import bp as main_bp
@@ -270,6 +271,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(portfolios_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(onboarding_bp)
+    app.register_blueprint(guia_bp)
 
 
 def _register_csrf_protection(app: Flask) -> None:
