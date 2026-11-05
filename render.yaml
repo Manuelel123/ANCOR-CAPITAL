@@ -1,4 +1,4 @@
-# Render Blueprint: the Atlas web service (Docker image).
+# Render Blueprint: the Ancor Capital web service (Docker image).
 # Render dashboard > New > Blueprint > this repository. Values marked
 # "sync: false" are asked for when the Blueprint is created.
 # The Postgres is created apart and is not declared here: a sync would create

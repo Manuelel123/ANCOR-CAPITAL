@@ -367,13 +367,13 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
     scoring = _mapping(source, data.get("puntaje"), "puntaje")
     score_fields = tuple(_sequence(source, scoring.get("preguntas"), "puntaje.preguntas"))
     max_score = 0
-    for field in score_fields:
-        if field == HORIZON_FACTOR:
+    for name in score_fields:
+        if name == HORIZON_FACTOR:
             max_score += len(horizon_options) - 1
-        elif field in questions_by_id:
-            max_score += len(questions_by_id[field].options) - 1
+        elif name in questions_by_id:
+            max_score += len(questions_by_id[name].options) - 1
         else:
-            _fail(source, f"puntaje.preguntas: «{field}» no es el horizonte ni una pregunta.")
+            _fail(source, f"puntaje.preguntas: «{name}» no es el horizonte ni una pregunta.")
     if thresholds and thresholds[-1][1] > max_score:
         _fail(source, f"los umbrales no pueden pasar del puntaje máximo ({max_score}).")
     capacity_question = scoring.get("capacidad")

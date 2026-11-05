@@ -165,9 +165,10 @@ def pages(portfolio_id: int) -> list[dict]:
         "backtest": "1",
         **BACKTEST_DEFAULTS,
     }
-    guided = {"action": "optimize", "universe": "Acciones y Bitcoin"}
+    universe = "Acciones y Bitcoin"
+    guided = {"action": "optimize", "universe": universe, "tickers": list(GUIDED_UNIVERSES[universe].values())}
     # inversionista may exclude assets, so its form posts the checked tickers.
-    compare_form = {**guided, "tickers": list(GUIDED_UNIVERSES[guided["universe"]].values()), "max_weight": "100"}
+    compare_form = {**guided, "max_weight": "100"}
     monitored = next(iter(PORTAFOLIOS_MONITOREO))
     market_form = {
         "action": "analyze",
@@ -181,9 +182,9 @@ def pages(portfolio_id: int) -> list[dict]:
         {"name": "HRP GET (novato)", "role": "novato", "method": "GET", "path": "/hrp"},
         {"name": "HRP POST guiado (novato)", "role": "novato", "method": "POST", "path": "/hrp", "form": guided},
         {"name": "HRP POST completo + backtest (gestor)", "role": "gestor", "method": "POST", "path": "/hrp", "form": hrp_full},
-        {"name": "Black-Litterman GET (novato)", "role": "novato", "method": "GET", "path": "/black-litterman"},
-        {"name": "Black-Litterman POST guiado (novato)", "role": "novato", "method": "POST", "path": "/black-litterman", "form": guided},
-        {"name": "Comparación POST (inversionista)", "role": "inversionista", "method": "POST", "path": "/comparar", "form": compare_form},
+        {"name": "Black-Litterman GET (gestor)", "role": "gestor", "method": "GET", "path": "/black-litterman"},
+        {"name": "Black-Litterman POST (gestor)", "role": "gestor", "method": "POST", "path": "/black-litterman", "form": guided},
+        {"name": "Comparación POST (gestor)", "role": "gestor", "method": "POST", "path": "/comparar", "form": compare_form},
         {"name": "Mercado GET (gestor)", "role": "gestor", "method": "GET", "path": "/monitoring"},
         {"name": "Mercado POST portafolio (gestor)", "role": "gestor", "method": "POST", "path": "/monitoring", "form": market_form},
         {"name": "Mis portafolios lista (gestor)", "role": "gestor", "method": "GET", "path": "/portafolios/"},

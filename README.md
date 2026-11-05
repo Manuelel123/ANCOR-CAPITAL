@@ -1,6 +1,6 @@
 # Ancor Capital · Inversión explicada
 
-Herramienta web **educativa** (Flask) para personas jóvenes e inexpertas que quieren aprender a construir portafolios: qué es diversificar, cómo se mide el riesgo y cómo reparten el dinero dos métodos profesionales, Hierarchical Risk Parity (HRP) y Black-Litterman. Cada usuario responde primero un perfil de riesgo y usa las herramientas según su rol (novato, inversionista o gestor). Los precios históricos se descargan de Tiingo (con Yahoo Finance como respaldo) y los datos fundamentales, capitalizaciones y tipos de cambio se consultan en Yahoo Finance.
+Herramienta web **educativa** (Flask) para personas jóvenes e inexpertas que quieren aprender a construir portafolios: qué es diversificar, cómo se mide el riesgo y cómo reparte el dinero un método profesional, Hierarchical Risk Parity (HRP). Cada usuario responde un diagnóstico y ve opciones según su categoría; el gestor conserva además Black-Litterman. Los precios históricos se descargan de Tiingo (con Yahoo Finance como respaldo) y los datos fundamentales, capitalizaciones y tipos de cambio se consultan en Yahoo Finance.
 
 > **Información educativa. No es recomendación de inversión ni asesoría financiera.**
 > Este aviso aparece en la portada y en todas las pantallas con resultados (HRP, Black-Litterman, comparación, Mercado, Mis portafolios, backtests y Mi perfil). Lo genera la macro `educational_notice()` de `web/templates/macros/learning.html`.

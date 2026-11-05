@@ -2325,3 +2325,7 @@ details.card > summary::after {
 details.card[open] > summary::after { transform: rotate(-135deg); }
 details.card > summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .card > .metric-list { padding-inline: var(--sp-6); }
+
+/* Space around the actions and notes that sit between cards. */
+.shared-actions { margin-block: var(--sp-4); }
+.notice + .analysis-layout { margin-top: var(--sp-6); }

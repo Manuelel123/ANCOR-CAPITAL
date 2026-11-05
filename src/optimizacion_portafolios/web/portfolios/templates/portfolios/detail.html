@@ -16,7 +16,7 @@
   {% if shared %}
     <p class="notice notice--info" role="note">Es un ejemplo educativo, no una recomendación. Se actualiza con los precios de hoy.</p>
     {% if copy_token %}
-      {{ fix_portfolio_control(copy_token) }}
+      <div class="shared-actions">{{ fix_portfolio_control(copy_token) }}</div>
     {% elif copy_locked %}
       <p class="help-text"><a href="{{ url_for('hrp.hrp') }}">Establecer este portafolio se habilita junto con la optimización.</a></p>
     {% endif %}
