@@ -70,6 +70,9 @@ ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "portfolios.confirm": INVESTORS,
     "portfolios.archive": INVESTORS,
     "portfolios.signals": MANAGERS,
+    "portfolios.rename": MANAGERS,
+    "portfolios.visibility": MANAGERS,
+    "portfolios.delete": MANAGERS,
     "account.backtests": MANAGERS,
     "account.backtest_detail": MANAGERS,
     "account.delete_backtest": MANAGERS,
@@ -90,6 +93,7 @@ FEATURE_ROLES: dict[str, frozenset[str]] = {
     "market": MANAGERS,
     "signals": MANAGERS,
     "backtest_history": MANAGERS,
+    "administer_portfolios": MANAGERS,
     # Guided pages: choose the assets (exclude some) and a maximum weight.
     "weight_limits": INVESTORS,
     "exclude_assets": INVESTORS,

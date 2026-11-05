@@ -33,6 +33,38 @@
             <dl class="account-metrics">
               <div><dt>Capital inicial</dt><dd>{{ money(portfolio.initial_capital) }}</dd></div>
             </dl>
+            {% if can('administer_portfolios') %}
+              <details>
+                <summary>Administrar</summary>
+                <form method="post" action="{{ url_for('portfolios.rename', portfolio_id=portfolio.id) }}" class="form-stack">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <div class="form-field">
+                    <label for="nombre-{{ portfolio.id }}">Nombre</label>
+                    <input id="nombre-{{ portfolio.id }}" name="name" value="{{ portfolio.name }}" maxlength="120" required>
+                  </div>
+                  <button class="button button-secondary button-sm" type="submit">Guardar nombre</button>
+                </form>
+                <form method="post" action="{{ url_for('portfolios.visibility', portfolio_id=portfolio.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="visible" value="{{ '0' if portfolio.visible else '1' }}">
+                  <button class="button button-secondary button-sm" type="submit">{{ 'Dejar de mostrar a los usuarios' if portfolio.visible else 'Mostrar a los usuarios' }}</button>
+                </form>
+                {% if portfolio.status == 'active' %}
+                  <form method="post" action="{{ url_for('portfolios.archive', portfolio_id=portfolio.id) }}" data-confirm="¿Liquidar este portafolio? Dejará de seguirse y conservará su historial.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="button button-secondary button-sm" type="submit">Liquidar portafolio</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('portfolios.delete', portfolio_id=portfolio.id) }}" class="form-stack" data-confirm="¿Eliminar este portafolio para siempre? Esta acción no se puede deshacer.">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <div class="form-field">
+                    <label for="eliminar-{{ portfolio.id }}">Para eliminarlo, escribe su nombre exacto</label>
+                    <input id="eliminar-{{ portfolio.id }}" name="confirmacion" autocomplete="off" required>
+                  </div>
+                  <button class="button button-danger button-sm" type="submit">Eliminar portafolio</button>
+                </form>
+              </details>
+            {% endif %}
           </div>
         </article>
       {% endfor %}

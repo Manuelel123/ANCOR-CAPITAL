@@ -27,7 +27,7 @@ def upgrade():
 
 
 def downgrade():
-    with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.drop_column('intro_vista_at')
-        batch_op.drop_column('datos_aviso_version')
-        batch_op.drop_column('datos_aceptados_at')
+    # Not in a batch: rebuilding users in SQLite cascades to everything it owns.
+    op.drop_column('users', 'intro_vista_at')
+    op.drop_column('users', 'datos_aviso_version')
+    op.drop_column('users', 'datos_aceptados_at')

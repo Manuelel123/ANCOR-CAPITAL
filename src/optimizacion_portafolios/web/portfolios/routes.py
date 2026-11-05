@@ -14,6 +14,9 @@ from optimizacion_portafolios.web.portfolios.snapshots import unsign
 _NAME_MAX = 120
 
 
+NAME_MAX_LENGTH = 120
+
+
 def owned_portfolio(portfolio_id: int):
     """The signed-in user's portfolio, or 404 (also when it belongs to someone else)."""
     portfolio = repositories.get_portfolio(current_user_id(), portfolio_id)
@@ -264,6 +267,43 @@ def archive(portfolio_id: int):
         repositories.archive_portfolio(portfolio, datetime.now(timezone.utc))
         flash("Portafolio archivado: deja de monitorearse y conserva todo su historial.", "info")
     return redirect(url_for("portfolios.detail", portfolio_id=portfolio.id))
+
+
+@bp.post("/<int:portfolio_id>/renombrar")
+@login_required
+def rename(portfolio_id: int):
+    portfolio = owned_portfolio(portfolio_id)
+    name = " ".join(request.form.get("name", "").split())
+    if not 1 <= len(name) <= NAME_MAX_LENGTH:
+        flash(f"El nombre debe tener entre 1 y {NAME_MAX_LENGTH} caracteres.", "error")
+    else:
+        repositories.rename_portfolio(portfolio, name)
+        flash(f"El portafolio ahora se llama «{name}».", "success")
+    return redirect(url_for("portfolios.index"))
+
+
+@bp.post("/<int:portfolio_id>/visibilidad")
+@login_required
+def visibility(portfolio_id: int):
+    portfolio = owned_portfolio(portfolio_id)
+    visible = request.form.get("visible") == "1"
+    repositories.set_portfolio_visibility(portfolio, visible)
+    flash(f"«{portfolio.name}» {'ya se muestra' if visible else 'ya no se muestra'} a los usuarios.", "info")
+    return redirect(url_for("portfolios.index"))
+
+
+@bp.post("/<int:portfolio_id>/eliminar")
+@login_required
+def delete(portfolio_id: int):
+    """Permanent: the name must be typed, because nothing brings it back."""
+    portfolio = owned_portfolio(portfolio_id)
+    name = portfolio.name
+    if request.form.get("confirmacion", "").strip() != name:
+        flash("Escribe el nombre exacto del portafolio para eliminarlo.", "error")
+        return redirect(url_for("portfolios.index"))
+    repositories.delete_portfolio(portfolio)
+    flash(f"«{name}» se eliminó con todo su historial.", "info")
+    return redirect(url_for("portfolios.index"))
 
 
 @bp.get("/<int:portfolio_id>/senales")

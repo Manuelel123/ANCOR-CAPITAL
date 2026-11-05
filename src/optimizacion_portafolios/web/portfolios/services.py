@@ -23,7 +23,7 @@ from optimizacion_portafolios.data.catalogs import BENCHMARKS
 from optimizacion_portafolios.data.fx import prices_in_usd
 from optimizacion_portafolios.data.market_data import DOWNLOAD_ERRORS, download_prices
 from optimizacion_portafolios.storage import repositories
-from optimizacion_portafolios.storage.models import Portfolio
+from optimizacion_portafolios.storage.models import DailySnapshot, Portfolio
 from optimizacion_portafolios.storage.repositories import HoldingData, TransactionData
 from optimizacion_portafolios.web.common.charts import (
     contribution_chart,
@@ -169,12 +169,40 @@ def _summary(portfolio: Portfolio) -> dict:
         "version_number": version.number if version else 0,
         "asset_count": len(version.holdings) if version else 0,
         "tickers": [holding.ticker for holding in version.holdings] if version else [],
+        "visible": portfolio.visible_usuarios,
     }
 
 
 def portfolio_header(portfolio: Portfolio) -> dict:
     """Summary for sub-pages (alerts, management, versions)."""
     return _summary(portfolio)
+
+
+def public_summary(portfolio: Portfolio) -> dict:
+    """What the other users see of a gestor's portfolio: weights and returns, no money.
+
+    Uses the last stored valuation, so the home page never downloads prices.
+    """
+    version = portfolio.current_version
+    last = portfolio.snapshots.order_by(DailySnapshot.day.desc()).first()
+    holdings = sorted(version.holdings, key=lambda holding: -holding.target_weight) if version else []
+
+    def total_return(value):
+        return None if value is None else value / portfolio.initial_capital - 1
+
+    return {
+        "name": portfolio.name,
+        "benchmark": _BENCHMARK_LABELS.get(portfolio.benchmark, portfolio.benchmark),
+        "tracking_start": portfolio.tracking_start.isoformat(),
+        "weights": [(holding.ticker, holding.target_weight) for holding in holdings],
+        "total_return": total_return(last.value) if last else None,
+        "benchmark_return": total_return(last.benchmark_value) if last else None,
+        "valued_on": last.day.isoformat() if last else None,
+    }
+
+
+def public_portfolios() -> list[dict]:
+    return [public_summary(portfolio) for portfolio in repositories.visible_gestor_portfolios()]
 
 
 def portfolio_list(user_id: str) -> list[dict]:

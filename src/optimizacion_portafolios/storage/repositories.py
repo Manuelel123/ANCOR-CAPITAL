@@ -14,15 +14,16 @@ from sqlalchemy.exc import IntegrityError
 
 from optimizacion_portafolios.storage import db
 from optimizacion_portafolios.storage.models import (
-    MODELS,
     AlertEvent,
     AlertRule,
     DailySnapshot,
-    VERSION_REASONS,
     Holding,
+    MODELS,
     Portfolio,
     PortfolioVersion,
     Transaction,
+    User,
+    VERSION_REASONS,
 )
 
 
@@ -167,6 +168,31 @@ def archive_portfolio(portfolio: Portfolio, when) -> None:
     portfolio.status = "archived"
     portfolio.archived_at = when
     db.session.commit()
+
+
+def rename_portfolio(portfolio: Portfolio, name: str) -> None:
+    portfolio.name = name
+    db.session.commit()
+
+
+def set_portfolio_visibility(portfolio: Portfolio, visible: bool) -> None:
+    portfolio.visible_usuarios = visible
+    db.session.commit()
+
+
+def delete_portfolio(portfolio: Portfolio) -> None:
+    """Remove the portfolio with its versions, valuations and alerts."""
+    db.session.delete(portfolio)
+    db.session.commit()
+
+
+def visible_gestor_portfolios() -> list[Portfolio]:
+    """Active portfolios a gestor chose to show to the other users."""
+    gestores = [str(user_id) for user_id in db.session.scalars(select(User.id).where(User.role == "gestor"))]
+    query = select(Portfolio).where(
+        Portfolio.user_id.in_(gestores), Portfolio.visible_usuarios.is_(True), Portfolio.status == "active"
+    )
+    return list(db.session.scalars(query.order_by(Portfolio.name)))
 
 
 def save_snapshots(portfolio: Portfolio, rows: list[dict], refresh_day: date | None = None) -> int:

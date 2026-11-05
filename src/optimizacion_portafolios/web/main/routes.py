@@ -19,6 +19,7 @@ from optimizacion_portafolios.web.common.guided import GESTOR_TERMS, GLOSSARY
 from optimizacion_portafolios.web.common.guided import glossary as glossary_items
 from optimizacion_portafolios.web.guia.journey import build_journey
 from optimizacion_portafolios.web.main import bp
+from optimizacion_portafolios.web.portfolios.services import public_portfolios
 from optimizacion_portafolios.web.profile.access import (
     current_profile,
     pending_onboarding_step,
@@ -182,6 +183,7 @@ def index():
         "main/dashboard.html",
         profile=current_profile(),
         journey=journey,
+        gestor_portfolios=public_portfolios(),
         pending_step=step,
         tools=tools,
     )

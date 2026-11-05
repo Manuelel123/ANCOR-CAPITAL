@@ -162,6 +162,8 @@ class Portfolio(db.Model):
     tracking_start: Mapped[date] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # A gestor's portfolio shown, as a summary, on the home page of other users.
+    visible_usuarios: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     versions: Mapped[list[PortfolioVersion]] = relationship(
         back_populates="portfolio",

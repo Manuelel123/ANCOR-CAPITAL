@@ -5,11 +5,14 @@ from datetime import date
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
+from sqlalchemy import func, select
+
 from optimizacion_portafolios.storage import db, repositories
-from optimizacion_portafolios.storage.models import Holding, PortfolioVersion
+from optimizacion_portafolios.storage.models import DailySnapshot, Holding, PortfolioVersion, Transaction
 from optimizacion_portafolios.storage.repositories import HoldingData, TransactionData
 from optimizacion_portafolios.web import create_app
 from optimizacion_portafolios.web.auth.throttle import LoginThrottle
+from support import create_test_user, csrf_from, login_session
 from test_web_accounts import AccountTestCase
 
 
@@ -144,6 +147,112 @@ class ThrottleTests(unittest.TestCase):
         self.assertGreater(throttle.retry_after("email:a", "ip:1"), 0)
         throttle.reset("email:a")
         self.assertEqual(throttle.retry_after("email:a"), 0)
+
+
+class GestorPortfolioAdministrationTests(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app({"TESTING": True, "SECRET_KEY": "test-secret"})
+        self.gestor_id = create_test_user(self.app, "jefa@example.com", role="gestor", role_confirmed=True)
+        self.novato_id = create_test_user(self.app, "ana@example.com")
+        with self.app.app_context():
+            self.portfolio_id = self._portfolio("Portafolio 1").id
+            repositories.save_snapshots(
+                repositories.get_portfolio(self.gestor_id, self.portfolio_id),
+                [{"day": date(2026, 11, 2), "value": 110000.0, "benchmark_value": 105000.0,
+                  "weights": {"AAPL": 1.0}, "metrics": None}],
+            )
+
+    def _portfolio(self, name, user_id=None):
+        return repositories.create_portfolio(
+            user_id or self.gestor_id, name=name, model="hrp", benchmark="SPY", initial_capital=100000.0,
+            tracking_start=date(2026, 10, 1), holdings=[HoldingData("AAPL", 1.0, 10.0, 100.0)],
+            transactions=[TransactionData("AAPL", "buy", 10.0, 100.0, 1000.0)],
+        )
+
+    def client_for(self, user_id):
+        client = self.app.test_client()
+        login_session(client, user_id)
+        return client
+
+    def post(self, client, path, **data):
+        data["csrf_token"] = csrf_from(client.get("/portafolios/"))
+        return client.post(path, data=data, follow_redirects=True)
+
+    def stored(self):
+        with self.app.app_context():
+            return repositories.get_portfolio(self.gestor_id, self.portfolio_id)
+
+    def test_the_gestor_can_rename(self):
+        html = self.post(self.client_for(self.gestor_id), f"/portafolios/{self.portfolio_id}/renombrar",
+                         name="  PAVF:   Portafolio Gestor 1 ").data.decode()
+        self.assertIn("PAVF: Portafolio Gestor 1", html)
+        self.assertEqual(self.stored().name, "PAVF: Portafolio Gestor 1")
+
+    def test_an_empty_name_is_rejected(self):
+        self.post(self.client_for(self.gestor_id), f"/portafolios/{self.portfolio_id}/renombrar", name="   ")
+        self.assertEqual(self.stored().name, "Portafolio 1")
+
+    def test_liquidating_keeps_the_history(self):
+        self.post(self.client_for(self.gestor_id), f"/portafolios/{self.portfolio_id}/archivar")
+        portfolio = self.stored()
+        self.assertEqual(portfolio.status, "archived")
+
+    def test_deleting_needs_the_exact_name(self):
+        self.post(self.client_for(self.gestor_id), f"/portafolios/{self.portfolio_id}/eliminar", confirmacion="otro")
+        self.assertIsNotNone(self.stored())
+
+    def test_deleting_removes_everything(self):
+        self.post(self.client_for(self.gestor_id), f"/portafolios/{self.portfolio_id}/eliminar",
+                  confirmacion="Portafolio 1")
+        self.assertIsNone(self.stored())
+        with self.app.app_context():
+            for model in (PortfolioVersion, Holding, Transaction, DailySnapshot):
+                self.assertEqual(db.session.scalar(select(func.count()).select_from(model)), 0, model.__name__)
+
+    def test_the_gestor_cannot_touch_a_portfolio_of_someone_else(self):
+        with self.app.app_context():
+            other = self._portfolio("Ajeno", self.novato_id).id
+        client = self.client_for(self.gestor_id)
+        token = csrf_from(client.get("/portafolios/"))
+        response = client.post(f"/portafolios/{other}/eliminar", data={"csrf_token": token, "confirmacion": "Ajeno"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_other_roles_have_no_controls_and_no_access(self):
+        client = self.client_for(self.novato_id)
+        self.assertNotIn("Administrar", client.get("/portafolios/").data.decode())
+        token = csrf_from(client.get("/portafolios/"))
+        for action, data in (("renombrar", {"name": "x"}), ("visibilidad", {"visible": "1"}),
+                             ("eliminar", {"confirmacion": "Portafolio 1"})):
+            response = client.post(f"/portafolios/{self.portfolio_id}/{action}", data={"csrf_token": token, **data})
+            self.assertEqual(response.status_code, 302, action)
+        self.assertEqual(self.stored().name, "Portafolio 1")
+
+    def test_users_only_see_what_the_gestor_shows_as_a_summary(self):
+        novato = self.client_for(self.novato_id)
+        self.assertNotIn("Ver los portafolios del gestor", novato.get("/").data.decode())
+        self.post(self.client_for(self.gestor_id), f"/portafolios/{self.portfolio_id}/visibilidad", visible="1")
+        html = novato.get("/").data.decode()
+        self.assertIn("Ver los portafolios del gestor", html)
+        self.assertIn("Portafolio 1", html)
+        self.assertIn("10.00 %", html)
+        self.assertIn("5.00 %", html)
+        self.assertIn("2026-11-02", html)
+        self.assertIn("AAPL 100.0 %", html)
+        self.assertNotIn("100,000", html)
+        self.assertNotIn(f"/portafolios/{self.portfolio_id}", html)
+        self.assertEqual(novato.get(f"/portafolios/{self.portfolio_id}").status_code, 404)
+
+    def test_a_liquidated_portfolio_stops_showing(self):
+        gestor = self.client_for(self.gestor_id)
+        self.post(gestor, f"/portafolios/{self.portfolio_id}/visibilidad", visible="1")
+        self.post(gestor, f"/portafolios/{self.portfolio_id}/archivar")
+        self.assertNotIn("Ver los portafolios del gestor", self.client_for(self.novato_id).get("/").data.decode())
+
+    def test_a_portfolio_of_another_user_is_never_shown(self):
+        with self.app.app_context():
+            portfolio = self._portfolio("Privado", self.novato_id)
+            repositories.set_portfolio_visibility(portfolio, True)
+            self.assertEqual(repositories.visible_gestor_portfolios(), [])
 
 
 if __name__ == "__main__":
