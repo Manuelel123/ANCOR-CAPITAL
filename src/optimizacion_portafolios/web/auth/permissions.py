@@ -37,8 +37,8 @@ LEARNERS = frozenset({NOVATO, INVERSIONISTA})
 
 ROLE_LABELS = {NOVATO: "Novato", INVERSIONISTA: "Inversionista", GESTOR: "Gestor"}
 ROLE_SUMMARIES = {
-    NOVATO: "HRP guiado, con explicaciones y glosario. Mis portafolios en solo lectura.",
-    INVERSIONISTA: "Lo del novato, más límites de peso, excluir activos, fijar y gestionar portafolios.",
+    NOVATO: "HRP guiado, con explicaciones y glosario. Eliges activos y fijas tu portafolio; luego lo sigues.",
+    INVERSIONISTA: "Lo del novato, más límites de peso y gestión de tus portafolios.",
     GESTOR: "Acceso total: todos los parámetros, Mercado y Opciones, backtests, señales y gestión.",
 }
 
@@ -64,7 +64,7 @@ ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "portfolios.detail": EVERYONE,
     "portfolios.alerts": EVERYONE,
     "portfolios.versions": EVERYONE,
-    "portfolios.fix": INVESTORS,
+    "portfolios.fix": EVERYONE,
     "portfolios.manage": INVESTORS,
     "portfolios.preview": INVESTORS,
     "portfolios.confirm": INVESTORS,
@@ -97,9 +97,9 @@ FEATURE_ROLES: dict[str, frozenset[str]] = {
     "administer_portfolios": MANAGERS,
     # Guided pages: choose the assets (exclude some) and a maximum weight.
     "weight_limits": INVESTORS,
-    "exclude_assets": INVESTORS,
+    "exclude_assets": EVERYONE,
     "compare": MANAGERS,
-    "fix_portfolio": INVESTORS,
+    "fix_portfolio": EVERYONE,
     "manage_portfolio": INVESTORS,
     "edit_alerts": INVESTORS,
 }

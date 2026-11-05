@@ -1,7 +1,7 @@
 {# Form pieces of the guided pages (novato / inversionista). Import "with context" (reads can()). #}
 {% from "macros/forms.html" import universe_select, asset_selector, percent_input, help_tip %}
 
-{# Universe choice: radio cards for the novato; select + asset chips (exclusion) from inversionista. #}
+{# Universe choice: select + asset chips to choose or exclude assets. #}
 {% macro universe_fields(universes, names, selected_name, descriptions, payload, available, selected, labels) %}
   {% if can('exclude_assets') %}
     <div class="form-field">
@@ -44,7 +44,7 @@
 {# Note under the guided form: why there are no more parameters. #}
 {% macro guided_note() %}
   {% if not can('weight_limits') %}
-    <p class="help-text">Vista guiada: el resto de parámetros está fijo con valores razonables. Con el rol inversionista puedes excluir activos y limitar el peso máximo.</p>
+    <p class="help-text">Vista guiada: el resto de parámetros está fijo con valores razonables. Con el rol inversionista también puedes limitar el peso máximo por activo.</p>
   {% else %}
     <p class="help-text">Vista guiada: periodo, benchmark y demás supuestos están fijos para que los resultados sean comparables.</p>
   {% endif %}

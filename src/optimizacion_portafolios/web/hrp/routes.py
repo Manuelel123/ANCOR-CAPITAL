@@ -162,10 +162,10 @@ def _backtest_config() -> BacktestConfig | None:
 
 
 def _guided_hrp():
+    """HRP for novato / inversionista: predefined universe, fixed inputs."""
     access = optimization_access(get_current_profile(current_user.id))
     if not access.unlocked:
         return render_template("guia/locked.html", view=access_view(access))
-    """HRP for novato / inversionista: predefined universe, fixed inputs."""
     universes = guided.GUIDED_HRP_UNIVERSES
     universe_name, available, selected = guided.guided_selection(universes)
     start_date = guided.guided_start()
@@ -176,6 +176,8 @@ def _guided_hrp():
             max_weight = guided.guided_max_weight()
             if len(selected) < 2:
                 raise ValueError("Deja al menos dos activos para calcular HRP.")
+            if universe_name == guided.OWN_UNIVERSE and len(selected) > guided.OWN_UNIVERSE_MAX_ASSETS:
+                raise ValueError(f"Elige como máximo {guided.OWN_UNIVERSE_MAX_ASSETS} activos.")
             bounds = WeightBounds(max_weight=max_weight / 100)
             try:
                 result = run_hrp(selected, guided.GUIDED_BENCHMARK, start_date, bounds, _ASSET_LABELS)
@@ -213,7 +215,7 @@ def _guided_hrp():
         universe_names=list(universes),
         universe_name=universe_name,
         universe_descriptions=guided.UNIVERSE_DESCRIPTIONS,
-        universes_payload=universes_payload(universes),
+        universes_payload=universes_payload(universes, guided.default_universe_selection),
         available_tickers=available,
         selected_tickers=selected,
         asset_labels=labels,

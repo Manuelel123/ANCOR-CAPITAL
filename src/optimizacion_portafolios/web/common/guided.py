@@ -19,6 +19,7 @@ from optimizacion_portafolios.data.catalogs import (
     ACTIVOS,
     BENCHMARKS,
     COMMODITIES,
+    ACTIVOS_HRP,
     CRIPTOMONEDAS,
     INDICES,
     PORTAFOLIO_IMAGEN,
@@ -32,9 +33,12 @@ GUIDED_UNIVERSES: dict[str, dict[str, str]] = {
     "Criptomonedas": CRIPTOMONEDAS,
     "Portafolio actual": PORTAFOLIO_IMAGEN,
 }
+OWN_UNIVERSE = "Elige tus activos"
+OWN_UNIVERSE_MAX_ASSETS = 20
 GUIDED_HRP_UNIVERSES: dict[str, dict[str, str]] = {
     **GUIDED_UNIVERSES,
     "Criptomonedas y commodities": {**CRIPTOMONEDAS, **COMMODITIES},
+    OWN_UNIVERSE: ACTIVOS_HRP,
 }
 UNIVERSE_DESCRIPTIONS = {
     "Acciones y Bitcoin": "Tres grandes tecnológicas y Bitcoin: buen ejemplo de activos parecidos frente a uno muy distinto.",
@@ -42,6 +46,7 @@ UNIVERSE_DESCRIPTIONS = {
     "Criptomonedas": "Cuatro criptomonedas: muy volátiles y bastante correlacionadas entre sí.",
     "Portafolio actual": "Una mezcla de sectores, acciones, oro y fintech (19 activos).",
     "Criptomonedas y commodities": "Criptomonedas junto a oro, plata, petróleo, gas y cobre.",
+    OWN_UNIVERSE: f"Arma tu propio portafolio: elige de 2 a {OWN_UNIVERSE_MAX_ASSETS} activos y HRP calcula los pesos.",
 }
 GUIDED_DEFAULT_UNIVERSE = "Acciones y Bitcoin"
 
@@ -78,11 +83,16 @@ def guided_selection(universes: dict, default_universe: str = GUIDED_DEFAULT_UNI
             flash("Selecciona uno de los universos disponibles.", "error")
         universe_name = default_universe
     available = list(dict.fromkeys(universes[universe_name].values()))
-    selected = available
+    selected = default_universe_selection(universe_name, available)
     if request.method == "POST" and can("exclude_assets") and request.form.get("action") != "refresh":
         checked = set(request.form.getlist("tickers"))
         selected = [ticker for ticker in available if ticker in checked]
     return universe_name, available, selected
+
+
+def default_universe_selection(universe_name: str, tickers: list[str]) -> list[str]:
+    """Every asset is checked, except where the user builds the portfolio."""
+    return [] if universe_name == OWN_UNIVERSE else tickers
 
 
 def guided_max_weight() -> float:

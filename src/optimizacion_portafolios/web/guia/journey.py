@@ -30,6 +30,8 @@ class Journey:
     has_ibkr: bool
     steps: tuple[dict, ...]
     contribution: str | None
+    guidelines_title: str
+    guidelines: tuple[str, ...]
 
 
 def _capital_level(questionnaire: Questionnaire, profile: Profile) -> str | None:
@@ -59,7 +61,10 @@ def build_journey(profile: Profile) -> Journey:
     step_ids = list(catalog["recorrido"][category.id])
     if has_ibkr:
         step_ids = ["guia_cuenta" if step_id == "guia" else step_id for step_id in step_ids]
-    if not optimization_access(profile).unlocked:
+    fund_complete = emergency_fund_complete(questionnaire, profile.version_cuestionario, answers)
+    if not fund_complete:
+        pass  # HRP stays in the menu; the journey first points to the fund
+    elif not optimization_access(profile).unlocked:
         step_ids.append("hrp_bloqueado")
     elif invests:
         step_ids.insert(0, "hrp_libre")
@@ -69,10 +74,12 @@ def build_journey(profile: Profile) -> Journey:
         category=category,
         invests=invests,
         capital_level=capital_level,
-        fund_complete=emergency_fund_complete(questionnaire, profile.version_cuestionario, answers),
+        fund_complete=fund_complete,
         has_ibkr=has_ibkr,
         steps=tuple(catalog["pasos"][step_id] for step_id in step_ids),
         contribution=_contribution(questionnaire, profile),
+        guidelines_title=catalog["pautas_titulo"],
+        guidelines=tuple(catalog["pautas"][category.id]),
     )
 
 

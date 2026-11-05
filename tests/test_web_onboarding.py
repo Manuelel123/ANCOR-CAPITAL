@@ -12,6 +12,7 @@ from flask import url_for
 
 import optimizacion_portafolios
 from optimizacion_portafolios.data import trm
+from optimizacion_portafolios.data.catalogs import ACTIVOS_HRP
 from optimizacion_portafolios.data.trm import DollarRate
 from optimizacion_portafolios.profiling import load_questionnaire
 from optimizacion_portafolios.profiling.avisos import DEFAULT_PATH, NoticesError, load_notices, parse_notices
@@ -392,6 +393,36 @@ class DiagnosisTests(OnboardingTestCase):
         self.assertIn("Mientras completas tu fondo de emergencia", html)
         self.assertIn("CDT digital", html)
         self.assertNotIn("FIC", html)
+
+    def test_general_guidelines_depend_on_the_category(self):
+        self.assertIn("Pautas generales", self.diagnosed(self.INICIAL))
+        self.assertIn("Primero arma tu fondo de emergencia", self.client.get("/").get_data(as_text=True))
+
+    def test_without_a_full_fund_hrp_is_not_highlighted_but_stays_open(self):
+        home = self.diagnosed({**self.AVANZADO, "p6": 2}, capital="mas_30m")
+        self.assertNotIn("Construye tu portafolio con HRP", home)
+        self.assertEqual(self.client.get("/hrp").status_code, 200)
+
+    def test_anyone_with_access_can_build_their_own_portfolio(self):
+        self.diagnosed(self.INICIAL)
+        html = self.client.get("/hrp", query_string={"universe": "Elige tus activos"}).get_data(as_text=True)
+        self.assertIn("Elige tus activos", html)
+        self.assertIn("HRP calcula los pesos", html)
+        self.assertIn('data-min-selected="2"', html)
+
+    def test_the_own_portfolio_starts_empty_and_has_a_limit(self):
+        with mock.patch("optimizacion_portafolios.web.hrp.routes.run_hrp") as run:
+            self.diagnosed(self.INICIAL)
+            token = csrf_from(self.client.get("/hrp"))
+            for tickers in ([], [f"X{n}" for n in range(3)]):
+                self.client.post("/hrp", data={"csrf_token": token, "action": "optimize",
+                                               "universe": "Elige tus activos", "tickers": tickers})
+            run.assert_not_called()
+            many = list(ACTIVOS_HRP.values())[:21]
+            response = self.client.post("/hrp", data={"csrf_token": token, "action": "optimize",
+                                                      "universe": "Elige tus activos", "tickers": many})
+        self.assertIn("como máximo 20", response.get_data(as_text=True))
+        run.assert_not_called()
 
     def test_the_contribution_shows_in_the_journey(self):
         self.assertIn("Aporte mensual que indicaste: $50.000 a $200.000", self.diagnosed(self.INICIAL))

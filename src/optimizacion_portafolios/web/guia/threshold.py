@@ -70,6 +70,13 @@ def optimization_access(profile: Profile) -> OptimizationAccess:
     return OptimizationAccess(False, amount=amount, missing_usd=ceil((threshold - amount) / rate.value), **base)
 
 
+def capital_in_dollars(profile: Profile | None) -> float | None:
+    """The capital the person wrote, in dollars at the day's rate."""
+    rate = dollar_rate()
+    amount = (profile.respuestas or {}).get(CAPITAL_AMOUNT_FIELD) if profile else None
+    return amount / rate.value if rate and amount else None
+
+
 def access_view(access: OptimizationAccess) -> dict:
     """Texts of the explanation, with today's figures."""
     text = optimization_text()

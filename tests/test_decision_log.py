@@ -38,7 +38,7 @@ class NovatoDecisionTests(DecisionLogMixin, RoleTestCase):
 
     @patch(HRP_PRICES, side_effect=priced)
     def test_guided_hrp_inserts_one_row_with_the_current_profile(self, _download):
-        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin", min_weight="40")
+        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin", tickers=["AAPL", "MSFT", "GOOGL", "BTC-USD"], min_weight="40")
         (row,) = self.records()
         self.assertEqual(row.usuario_id, int(self.user_id))
         self.assertEqual((row.metodo, row.origen, row.rol), ("hrp", "hrp", "novato"))
@@ -55,24 +55,24 @@ class NovatoDecisionTests(DecisionLogMixin, RoleTestCase):
 
     @patch(HRP_PRICES, side_effect=priced)
     def test_new_profile_is_used_by_later_rows(self, _download):
-        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin")
+        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin", tickers=["AAPL", "MSFT", "GOOGL", "BTC-USD"])
         first_profile = self.current_profile_id()
         new_profile = add_test_profile(self.app, self.user_id, horizon="menos_1")
         with self.client.session_transaction() as session:
             session.pop("perfil", None)  # as after repeating the questionnaire
-        self.post("/hrp", action="optimize", universe="Sectores de EE. UU.")
+        self.post("/hrp", action="optimize", universe="Sectores de EE. UU.", tickers=["XLV", "XLF", "XLK", "XLE"])
         first, second = self.records()
         self.assertEqual((first.perfil_id, second.perfil_id), (first_profile, new_profile))
         self.assertEqual(second.perfil_final, "adverso")
 
     @patch(HRP_PRICES, side_effect=ValueError("sin datos"))
     def test_failed_calculation_records_nothing(self, _download):
-        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin")
+        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin", tickers=["AAPL", "MSFT", "GOOGL", "BTC-USD"])
         self.assertEqual(self.records(), [])
 
     @patch(HRP_PRICES, side_effect=priced)
     def test_history_page_lists_only_own_rows(self, _download):
-        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin")
+        self.post("/hrp", action="optimize", universe="Acciones y Bitcoin", tickers=["AAPL", "MSFT", "GOOGL", "BTC-USD"])
         with self.app.app_context():
             from support import create_test_user
 

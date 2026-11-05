@@ -34,7 +34,7 @@ from optimizacion_portafolios.web.common.charts import (
     weights_vs_target_chart,
 )
 from optimizacion_portafolios.web.portfolios import alerting
-from optimizacion_portafolios.web.portfolios.snapshots import MODEL_LABELS, default_name
+from optimizacion_portafolios.web.portfolios.snapshots import MODEL_LABELS, copied_from, default_name
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,7 @@ def fix_form(snapshot: dict) -> dict:
         "benchmark": snapshot.get("benchmark") or "SPY",
         "benchmarks": benchmark_options(snapshot.get("benchmark") or ""),
         "weights": sorted(weights.items(), key=lambda item: -item[1]),
+        "copied_from": copied_from(snapshot),
     }
 
 
@@ -186,20 +187,12 @@ def public_summary(portfolio: Portfolio) -> dict:
     version = portfolio.current_version
     # order_by(None): the relationship already sorts by day, oldest first.
     last = portfolio.snapshots.order_by(None).order_by(DailySnapshot.day.desc()).first()
-    holdings = sorted(version.holdings, key=lambda holding: -holding.target_weight) if version else []
-
-    def total_return(value):
-        return None if value is None else value / portfolio.initial_capital - 1
-
     return {
         "id": portfolio.id,
         "name": portfolio.name,
-        "benchmark": _BENCHMARK_LABELS.get(portfolio.benchmark, portfolio.benchmark),
         "tracking_start": portfolio.tracking_start.isoformat(),
-        "weights": [(holding.ticker, holding.target_weight) for holding in holdings],
-        "total_return": total_return(last.value) if last else None,
-        "benchmark_return": total_return(last.benchmark_value) if last else None,
-        "valued_on": last.day.isoformat() if last else None,
+        "asset_count": len(version.holdings) if version else 0,
+        "total_return": last.value / portfolio.initial_capital - 1 if last else None,
     }
 
 

@@ -4,17 +4,24 @@ from datetime import datetime, timezone
 
 from flask import abort, flash, redirect, render_template, request, url_for
 
+from flask_login import current_user
+
 from optimizacion_portafolios.storage import repositories
+from optimizacion_portafolios.storage.profiles import get_current_profile
+from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE
+from optimizacion_portafolios.web.guia.threshold import capital_in_dollars, optimization_access
 from optimizacion_portafolios.web.auth.session import current_user_id, login_required
 from optimizacion_portafolios.web.common.forms import normalize_ticker, parse_bounded_float
 from optimizacion_portafolios.web.decisions import log as decision_log
 from optimizacion_portafolios.web.portfolios import alerting, bp, management, services, signals_view
-from optimizacion_portafolios.web.portfolios.snapshots import unsign
+from optimizacion_portafolios.web.portfolios.snapshots import copy_snapshot, sign, unsign
 
 _NAME_MAX = 120
 
 
 NAME_MAX_LENGTH = 120
+MIN_CAPITAL_USD = 100
+LOCKED_MESSAGE = "Para fijar un portafolio necesitas tener habilitada la optimización."
 
 
 def owned_portfolio(portfolio_id: int):
@@ -37,12 +44,19 @@ def index():
 @login_required
 def fix():
     """Two steps: ``step=form`` shows the form, ``step=confirm`` stores it."""
+    profile = get_current_profile(current_user.id)
+    if current_user.role != GESTOR_ROLE and not (profile and optimization_access(profile).unlocked):
+        flash(LOCKED_MESSAGE, "info")
+        return redirect(url_for("hrp.hrp"))
     token = request.form.get("snapshot", "")
     snapshot = unsign(token)
     if snapshot is None:
         flash("El resultado expiró o no es válido. Vuelve a calcular el portafolio.", "error")
         return redirect(url_for("portfolios.index"))
     form = services.fix_form(snapshot)
+    capital = capital_in_dollars(profile)
+    if capital is not None and capital >= MIN_CAPITAL_USD:
+        form["capital"] = capital
     values = {
         "name": form["default_name"],
         "capital": f"{form['capital']:.0f}",
@@ -54,10 +68,12 @@ def fix():
         values = {field: request.form.get(field, values[field]).strip() for field in values}
         alert_rows = alerting.submitted_rows()
         try:
+            if form["copied_from"] and request.form.get("entiendo") != "1":
+                raise ValueError("Confirma que entiendes que es una copia educativa.")
             rules = alerting.parse_rules_form()
             name = " ".join(values["name"].split())[:_NAME_MAX] or form["default_name"]
             capital = parse_bounded_float(
-                "capital", values["capital"], 100, 1e12,
+                "capital", values["capital"], MIN_CAPITAL_USD, 1e12,
                 "El capital inicial debe ser numérico.",
                 "El capital inicial debe estar entre 100 y 1 000 000 000 000 USD.",
             )
@@ -101,7 +117,15 @@ def shared(portfolio_id: int):
     portfolio = repositories.visible_gestor_portfolio(portfolio_id)
     if portfolio is None:
         abort(404)
-    return render_template("portfolios/detail.html", portfolio=services.portfolio_detail(portfolio), shared=True)
+    profile = get_current_profile(current_user.id)
+    allowed = current_user.role != GESTOR_ROLE and profile is not None and optimization_access(profile).unlocked
+    return render_template(
+        "portfolios/detail.html",
+        portfolio=services.portfolio_detail(portfolio),
+        shared=True,
+        copy_token=sign(copy_snapshot(portfolio)) if allowed else None,
+        copy_locked=current_user.role != GESTOR_ROLE and not allowed,
+    )
 
 
 @bp.route("/<int:portfolio_id>/alertas", methods=["GET", "POST"])

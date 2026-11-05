@@ -109,6 +109,11 @@ def parse_instruments(data, source: str = "instrumentos") -> dict:
     journey = data.get("recorrido")
     if not isinstance(journey, dict) or not journey:
         raise GuideError(f"{source}: falta «recorrido».")
+    guidelines = data.get("pautas")
+    if not isinstance(guidelines, dict) or not all(guidelines.get(category) for category in journey):
+        raise GuideError(f"{source}: «pautas» debe tener textos para cada categoría del recorrido.")
+    if not str(data.get("pautas_titulo") or "").strip():
+        raise GuideError(f"{source}: falta el texto de «pautas_titulo».")
     for category, step_ids in journey.items():
         unknown = set(step_ids) - set(steps)
         if unknown:

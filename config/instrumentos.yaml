@@ -57,6 +57,22 @@ pasos:
     descripcion: Ya inviertes, así que puedes ajustar el peso máximo y excluir activos.
     destino: hrp.hrp
 
+# Pautas generales de cada categoría: sin nombrar activos ni entidades.
+pautas_titulo: Pautas generales
+pautas:
+  inicial:
+    - Primero arma tu fondo de emergencia.
+    - Invierte solo dinero que no vayas a necesitar pronto.
+    - Empieza con poco y entiende cada opción antes de dar el siguiente paso.
+  intermedio:
+    - Reparte tu dinero entre varios tipos de activos.
+    - Revisa los costos antes de cada compra.
+    - Define por cuánto tiempo vas a invertir.
+  avanzado:
+    - Evita concentrar mucho dinero en un solo activo.
+    - Revisa tu portafolio con una frecuencia fija, no por cada noticia.
+    - Ten en cuenta costos e impuestos antes de rebalancear.
+
 # Pasos de cada categoría; HRP se agrega según si la persona ya invierte y su capital.
 recorrido:
   inicial: [glosario, opciones]

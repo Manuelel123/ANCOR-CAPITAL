@@ -15,6 +15,10 @@
           <li><a href="{{ url_for(step.destino) }}"><strong>{{ step.titulo }}</strong></a>: {{ step.descripcion }}</li>
         {% endfor %}
       </ol>
+      <p><strong>{{ journey.guidelines_title }}</strong></p>
+      <ul>
+        {% for guideline in journey.guidelines %}<li>{{ guideline }}</li>{% endfor %}
+      </ul>
       {% if journey.contribution %}<p class="help-text">Aporte mensual que indicaste: {{ journey.contribution }}.</p>{% endif %}
     </div>
   </section>

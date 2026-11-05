@@ -1,5 +1,6 @@
 """F1: storage layer, ownership checks, Flask-Login and the sign-in throttle."""
 
+import re
 import unittest
 from datetime import date
 from unittest.mock import patch
@@ -7,6 +8,10 @@ from urllib.parse import urlsplit
 
 import pandas as pd
 from sqlalchemy import func, select
+
+from optimizacion_portafolios.data.trm import DollarRate
+from optimizacion_portafolios.storage.profiles import get_current_profile
+from optimizacion_portafolios.web.portfolios.snapshots import copy_snapshot, sign
 
 from optimizacion_portafolios.storage import db, repositories
 from optimizacion_portafolios.storage.models import DailySnapshot, Holding, PortfolioVersion, Transaction
@@ -150,6 +155,15 @@ class ThrottleTests(unittest.TestCase):
         self.assertEqual(throttle.retry_after("email:a"), 0)
 
 
+def csrf_from_html(html):
+    return re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
+
+
+def copy_token_of(app, user_id, portfolio_id):
+    with app.app_context():
+        return sign(copy_snapshot(repositories.get_portfolio(user_id, portfolio_id)))
+
+
 def _rising_prices(tickers, start, end):
     index = pd.bdate_range(start, end)
     return pd.DataFrame({ticker: [100.0 + day for day in range(len(index))] for ticker in tickers}, index=index)
@@ -241,9 +255,10 @@ class GestorPortfolioAdministrationTests(unittest.TestCase):
         self.assertIn("Ver los portafolios del gestor", html)
         self.assertIn("Portafolio 1", html)
         self.assertIn("10.00 %", html)
-        self.assertIn("5.00 %", html)
-        self.assertIn("2026-11-02", html)
-        self.assertIn("AAPL 100.0 %", html)
+        self.assertIn("Establecido el", html)
+        self.assertIn("2026-10-01", html)
+        self.assertNotIn("Benchmark", html)
+        self.assertNotIn("AAPL", html)
         self.assertIn(f"/portafolios/gestor/{self.portfolio_id}", html)
         self.assertEqual(novato.get(f"/portafolios/{self.portfolio_id}").status_code, 404)
 
@@ -258,9 +273,8 @@ class GestorPortfolioAdministrationTests(unittest.TestCase):
             ])
             repositories.set_portfolio_visibility(portfolio, True)
         html = self.client_for(self.novato_id).get("/").data.decode()
-        self.assertIn("2026-11-04", html)
         self.assertIn("20.00 %", html)
-        self.assertNotIn("2026-10-19", html)
+        self.assertNotIn("-10.00 %", html)
 
     @patch("optimizacion_portafolios.web.portfolios.services.download_prices", side_effect=_rising_prices)
     def test_users_see_the_live_panel_and_can_only_look(self, _download):
@@ -274,12 +288,87 @@ class GestorPortfolioAdministrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Portafolio 1", html)
         self.assertIn("Portafolio del gestor", html)
-        self.assertIn("Solo puedes verlo", html)
-        self.assertIn("AAPL", html)
+        self.assertIn("ejemplo educativo", html)
+        self.assertIn("Semáforo de reglas", html)
         self.assertNotIn("No se pudo valorar", html)
+        for removed in ("Posiciones vigentes", "Fotos diarias", 'class="metric-groups"'):
+            self.assertNotIn(removed, html, removed)
         for link in ("/alertas", "/gestionar", "/versiones", "/senales"):
             self.assertNotIn(f'/portafolios/{self.portfolio_id}{link}', html, link)
         self.assertNotIn("portfolio-tabs", html)
+
+    @patch("optimizacion_portafolios.web.portfolios.services.download_prices", side_effect=_rising_prices)
+    def test_the_gestor_keeps_the_whole_panel(self, _download):
+        html = self.client_for(self.gestor_id).get(f"/portafolios/{self.portfolio_id}").data.decode()
+        self.assertIn("Posiciones vigentes", html)
+        self.assertIn("Fotos diarias", html)
+
+    def _shown(self):
+        with self.app.app_context():
+            repositories.set_portfolio_visibility(
+                repositories.get_portfolio(self.gestor_id, self.portfolio_id), True
+            )
+        return f"/portafolios/gestor/{self.portfolio_id}"
+
+    def _copy_token(self, client):
+        html = client.get(self._shown()).data.decode()
+        return re.search(r'name="snapshot" value="([^"]+)"', html).group(1), csrf_from_html(html)
+
+    @patch("optimizacion_portafolios.web.portfolios.services.download_prices", side_effect=_rising_prices)
+    def test_a_user_can_establish_the_same_portfolio(self, _download):
+        client = self.client_for(self.novato_id)
+        token, csrf = self._copy_token(client)
+        form = client.post("/portafolios/fijar", data={"csrf_token": csrf, "snapshot": token, "step": "form"})
+        html = form.data.decode()
+        self.assertIn("Copia de Portafolio 1", html)
+        self.assertIn("copia educativa", html)
+
+        refused = client.post("/portafolios/fijar", data={
+            "csrf_token": csrf, "snapshot": token, "step": "confirm", "name": "Mi copia", "capital": "1000",
+            "commission_bps": "10", "benchmark": "SPY",
+        })
+        self.assertIn("Confirma que entiendes", refused.data.decode())
+
+        client.post("/portafolios/fijar", data={
+            "csrf_token": csrf, "snapshot": token, "step": "confirm", "name": "Mi copia", "capital": "1000",
+            "commission_bps": "10", "benchmark": "SPY", "entiendo": "1",
+        })
+        with self.app.app_context():
+            (copy,) = repositories.list_portfolios(self.novato_id)
+            self.assertEqual(copy.name, "Mi copia")
+            self.assertEqual(copy.initial_capital, 1000.0)
+            self.assertEqual([h.ticker for h in copy.current_version.holdings], ["AAPL"])
+            self.assertEqual(repositories.get_portfolio(self.gestor_id, self.portfolio_id).name, "Portafolio 1")
+
+    @patch("optimizacion_portafolios.web.portfolios.services.download_prices", side_effect=_rising_prices)
+    def test_the_copy_needs_the_optimization_unlocked(self, _download):
+        self.app.config["DOLLAR_RATE"] = DollarRate(3000.0, "2026-11-05", "TRM")
+        with self.app.app_context():
+            profile = get_current_profile(int(self.novato_id))
+            profile.capital_rango = "menos_50k"
+            profile.respuestas = {**profile.respuestas, "capital_monto": 1000}
+            db.session.commit()
+        client = self.client_for(self.novato_id)
+        html = client.get(self._shown()).data.decode()
+        self.assertNotIn('name="snapshot"', html)
+        self.assertIn("se habilita junto con la optimización", html)
+        token = copy_token_of(self.app, self.gestor_id, self.portfolio_id)
+        response = client.post("/portafolios/fijar", data={
+            "csrf_token": csrf_from_html(html), "snapshot": token, "step": "form",
+        })
+        self.assertEqual(urlsplit(response.location).path, "/hrp")
+
+    @patch("optimizacion_portafolios.web.portfolios.services.download_prices", side_effect=_rising_prices)
+    def test_the_form_starts_from_the_capital_of_the_user(self, _download):
+        self.app.config["DOLLAR_RATE"] = DollarRate(3000.0, "2026-11-05", "TRM")
+        with self.app.app_context():
+            profile = get_current_profile(int(self.novato_id))
+            profile.respuestas = {**profile.respuestas, "capital_monto": 9000000}
+            db.session.commit()
+        client = self.client_for(self.novato_id)
+        token, csrf = self._copy_token(client)
+        html = client.post("/portafolios/fijar", data={"csrf_token": csrf, "snapshot": token, "step": "form"}).data.decode()
+        self.assertIn('name="capital" type="number" min="100" step="any" inputmode="decimal" required value="3000"', html)
 
     def test_a_hidden_portfolio_has_no_panel(self):
         self.assertEqual(self.client_for(self.novato_id).get(f"/portafolios/gestor/{self.portfolio_id}").status_code, 404)

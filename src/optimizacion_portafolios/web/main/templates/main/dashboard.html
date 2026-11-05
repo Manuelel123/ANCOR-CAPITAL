@@ -66,15 +66,11 @@
             <article class="card account-card">
               <div class="card__body">
                 <h3 class="account-card__title"><a href="{{ url_for('portfolios.shared', portfolio_id=portfolio.id) }}">{{ portfolio.name }}</a></h3>
-                <p class="help-text">Benchmark {{ portfolio.benchmark }} · desde {{ portfolio.tracking_start }}</p>
                 <dl class="account-metrics">
                   <div><dt>Rendimiento</dt><dd>{{ portfolio.total_return|pct }}</dd></div>
-                  <div><dt>Benchmark</dt><dd>{{ portfolio.benchmark_return|pct }}</dd></div>
-                  <div><dt>Valorado el</dt><dd>{{ portfolio.valued_on or 'Sin valoración' }}</dd></div>
+                  <div><dt>Activos</dt><dd>{{ portfolio.asset_count }}</dd></div>
+                  <div><dt>Establecido el</dt><dd>{{ portfolio.tracking_start }}</dd></div>
                 </dl>
-                <ul class="weight-chips" aria-label="Activos y pesos">
-                  {% for ticker, weight in portfolio.weights %}<li class="mono">{{ ticker }} {{ weight|pct(1) }}</li>{% endfor %}
-                </ul>
                 <a class="button button-secondary button-sm" href="{{ url_for('portfolios.shared', portfolio_id=portfolio.id) }}">Ver panel</a>
               </div>
             </article>

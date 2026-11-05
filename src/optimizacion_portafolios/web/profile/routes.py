@@ -38,8 +38,6 @@ from optimizacion_portafolios.storage.profiles import (
     save_profile,
 )
 from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE, canonical_role
-from optimizacion_portafolios.web.guia.journey import build_journey
-from optimizacion_portafolios.web.guia.threshold import format_cop
 from optimizacion_portafolios.web.profile import bp
 from optimizacion_portafolios.web.profile.access import get_questionnaire, refresh_profile_session
 
@@ -233,6 +231,8 @@ def _emergency_fund_text(questionnaire: Questionnaire, profile: Profile) -> str 
 
 def _profile_view(questionnaire: Questionnaire, profile: Profile) -> dict:
     """Labels and the plain-language explanation of a saved profile."""
+    from optimizacion_portafolios.web.guia.threshold import format_cop  # the guide needs this package
+
     explanation = None
     if profile.version_cuestionario == questionnaire.version:
         try:
@@ -291,6 +291,12 @@ def _is_gestor() -> bool:
     return current_user.role == GESTOR_ROLE
 
 
+def _journey(profile: Profile):
+    from optimizacion_portafolios.web.guia.journey import build_journey  # the guide needs this package
+
+    return None if _is_gestor() else build_journey(profile)
+
+
 @bp.get("/resultado")
 def result():
     profile = get_current_profile(current_user.id)
@@ -299,7 +305,7 @@ def result():
     return render_template(
         "profile/result.html",
         view=_profile_view(get_questionnaire(), profile),
-        journey=None if _is_gestor() else build_journey(profile),
+        journey=_journey(profile),
         disclaimer=DISCLAIMER,
     )
 
@@ -311,12 +317,11 @@ def mine():
         return redirect(url_for("profile.questionnaire"))
     questionnaire = get_questionnaire()
     history = list_profiles(current_user.id)
-    journey = None if _is_gestor() else build_journey(profile)
     labels = {level.id: level.label for level in questionnaire.levels}
     return render_template(
         "profile/mine.html",
         view=_profile_view(questionnaire, profile),
-        journey=journey,
+        journey=_journey(profile),
         disclaimer=DISCLAIMER,
         history=history,
         level_labels=labels,

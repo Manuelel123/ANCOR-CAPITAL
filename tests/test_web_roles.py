@@ -125,9 +125,9 @@ class PermissionTableTests(unittest.TestCase):
             "signals": ("gestor",),
             "market": ("gestor",),
             "weight_limits": ("inversionista", "gestor"),
-            "exclude_assets": ("inversionista", "gestor"),
+            "exclude_assets": ("novato", "inversionista", "gestor"),
             "compare": ("gestor",),
-            "fix_portfolio": ("inversionista", "gestor"),
+            "fix_portfolio": ("novato", "inversionista", "gestor"),
             "manage_portfolio": ("inversionista", "gestor"),
             "edit_alerts": ("inversionista", "gestor"),
         }
@@ -186,7 +186,6 @@ class NovatoTests(MatrixMixin, RoleTestCase):
             ("post", f"/portafolios/{portfolio_id}/gestionar/vista-previa", {"action": "rebalance", "rebalance_method": "targets"}),
             ("post", f"/portafolios/{portfolio_id}/gestionar/confirmar", {"token": "x"}),
             ("post", f"/portafolios/{portfolio_id}/archivar", {}),
-            ("post", "/portafolios/fijar", {"snapshot": self.snapshot_token(), "step": "confirm", "name": "Nuevo"}),
         ]
         for method, path, data in blocked:
             with self.subTest(path=path, method=method):
@@ -201,9 +200,10 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         html = self.client.get("/hrp").data.decode()
         self.assertIn("Vista guiada", html)
         for field in ('name="start_date"', 'name="min_weight"', 'name="max_weight"', 'name="custom_tickers"',
-                      'name="backtest"', 'name="benchmark"', 'name="tickers"'):
+                      'name="backtest"', 'name="benchmark"'):
             self.assertNotIn(field, html, field)
-        self.assertIn('name="universe" value="Acciones y Bitcoin"', html)
+        self.assertIn('name="tickers"', html)
+        self.assertIn("data-universe-select", html)
         self.assertIn("Glosario", html)
 
     @patch("optimizacion_portafolios.web.hrp.services.download_prices", side_effect=priced)
@@ -217,7 +217,7 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         self.assertEqual(response.status_code, 200)
         html = response.data.decode()
         tickers, start, _end = download.call_args_list[0].args
-        self.assertEqual(tickers, ("AAPL", "MSFT", "GOOGL", "BTC-USD"))
+        self.assertEqual(tickers, ("AAPL", "MSFT"))
         self.assertEqual(start, guided.guided_start())
         self.assertEqual(download.call_args_list[1].args[0], ("SPY",))
         self.assertEqual(download.call_count, 2)  # no backtest download
@@ -226,7 +226,7 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         self.assertIn("volatilidad anual", html)
         self.assertIn("correlación promedio con el resto", html)
         self.assertIn("Diversificación", html)  # glossary
-        self.assertNotIn("Establecer como portafolio óptimo", html)
+        self.assertIn("Establecer como portafolio óptimo", html)
         self.assertNotIn("Backtest de rebalanceo", html)
         weights = [float(value) for value in re.findall(r'<td class="num">(\d+\.\d+)%</td>', html)]
         self.assertAlmostEqual(sum(weights), 100.0, places=1)

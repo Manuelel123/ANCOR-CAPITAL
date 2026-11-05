@@ -52,7 +52,14 @@ def unsign(token: str) -> dict | None:
     return snapshot
 
 
+def copied_from(snapshot: dict) -> str | None:
+    """Name of the gestor's portfolio this snapshot copies, if any."""
+    return (snapshot.get("params") or {}).get("copied_from")
+
+
 def default_name(snapshot: dict) -> str:
+    if copied_from(snapshot):
+        return f"Copia de {copied_from(snapshot)}"[:120]
     count = len(snapshot.get("weights") or {})
     return f"{MODEL_LABELS[snapshot['model']]} · {count} activos · {date.today().isoformat()}"
 
@@ -72,6 +79,17 @@ def hrp_snapshot(result: dict, *, universe: str, start_date: str) -> dict:
             "data_end": result["end"],
             "bounds": summary["bounds"],
         },
+    }
+
+
+def copy_snapshot(portfolio) -> dict:
+    """Same weights and benchmark as ``portfolio``, to fix at today's prices."""
+    return {
+        "model": portfolio.model,
+        "benchmark": portfolio.benchmark,
+        "weights": {holding.ticker: holding.target_weight for holding in portfolio.current_version.holdings},
+        "metrics": {},
+        "params": {"copied_from": portfolio.name, "tickers": [h.ticker for h in portfolio.current_version.holdings]},
     }
 
 

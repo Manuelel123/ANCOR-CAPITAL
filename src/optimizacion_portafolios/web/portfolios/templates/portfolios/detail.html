@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "portfolios/_macros.html" import disclaimer, money, traffic_light, portfolio_tabs %}
 {% from "macros/charts.html" import plotly_chart %}
+{% from "macros/account.html" import fix_portfolio_control with context %}
 {% block title %}{{ portfolio.name }}{% endblock %}
 {% block content %}
   {% set tracking = portfolio.tracking %}
@@ -13,7 +14,12 @@
     {{ traffic_light(portfolio.alerts.level, portfolio.alerts.level_label) }}
   </header>
   {% if shared %}
-    <p class="notice notice--info" role="note">Es un ejemplo educativo, no una recomendación. Solo puedes verlo; se actualiza con los precios de hoy.</p>
+    <p class="notice notice--info" role="note">Es un ejemplo educativo, no una recomendación. Se actualiza con los precios de hoy.</p>
+    {% if copy_token %}
+      {{ fix_portfolio_control(copy_token) }}
+    {% elif copy_locked %}
+      <p class="help-text"><a href="{{ url_for('hrp.hrp') }}">Establecer este portafolio se habilita junto con la optimización.</a></p>
+    {% endif %}
   {% else %}
     {{ portfolio_tabs(portfolio.id, 'detail') }}
   {% endif %}
@@ -81,6 +87,7 @@
       </article>
     {% endif %}
 
+    {% if not shared %}
     <section class="metric-groups" aria-label="Métricas de seguimiento">
       {% for group in tracking.groups %}
         <article class="card">
@@ -93,8 +100,10 @@
         </article>
       {% endfor %}
     </section>
+    {% endif %}
   {% endif %}
 
+  {% if not shared %}
   <article class="card account-section">
     <header class="card__header"><div><h2 class="card__title">Posiciones vigentes</h2><p class="card__subtitle">Versión {{ portfolio.version.number }} · comisión {{ '%g'|format(portfolio.commission_bps) }} pb</p></div></header>
     <div class="data-table-wrap">
@@ -143,6 +152,7 @@
         </table>
       </div>
     </article>
+  {% endif %}
   {% endif %}
 {% endblock %}
 {% block page_scripts %}
