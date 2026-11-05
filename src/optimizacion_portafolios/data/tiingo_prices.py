@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 API_KEY_ENV_VAR = "TIINGO_API_KEY"
 _TIMEOUT_SECONDS = 20
 _CRYPTO_PATTERN = re.compile(r"^([A-Z0-9]+)-USD$")
+_NOT_FOUND = 404
+_RATE_LIMITED = 429
 
 
 class PriceSource(Enum):
@@ -91,6 +93,14 @@ def _status_code(error: RestClientError) -> int | None:
     return getattr(response, "status_code", None)
 
 
+def _falls_back_to_yahoo(error: RestClientError) -> bool:
+    """True when Yahoo should serve the data: not covered, or allowance used up."""
+    status = _status_code(error)
+    if status == _RATE_LIMITED:
+        logger.warning("Tiingo request allowance used up; falling back to Yahoo Finance.")
+    return status in (_NOT_FOUND, _RATE_LIMITED)
+
+
 def _http_error(error: RestClientError, description: str) -> requests.HTTPError:
     status = _status_code(error)
     cause = error.args[0] if error.args else None
@@ -123,7 +133,9 @@ def download_tiingo_prices(
     """Download adjusted closes of stock/ETF tickers; unknown tickers are omitted.
 
     A 404 response means Tiingo does not cover the ticker and is not an error;
-    any other HTTP failure is raised as ``requests.HTTPError``.
+    a 429 means the allowance is used up, so the remaining tickers are left out
+    too (Yahoo serves them). Any other HTTP failure is raised as
+    ``requests.HTTPError``.
     """
     client = _client(api_key)
     prices: dict[str, pd.Series] = {}
@@ -137,9 +149,11 @@ def download_tiingo_prices(
                 frequency="daily",
             )
         except RestClientError as error:
-            if _status_code(error) == 404:
-                continue
-            raise _http_error(error, ticker) from error
+            if not _falls_back_to_yahoo(error):
+                raise _http_error(error, ticker) from error
+            if _status_code(error) == _RATE_LIMITED:
+                break
+            continue
         series = _series(records or [], "adjClose", ticker)
         if series is not None:
             prices[ticker] = series
@@ -152,7 +166,8 @@ def download_tiingo_crypto_prices(
     """Download daily closes of ``XXX-USD`` pairs from Tiingo's crypto endpoint.
 
     Crypto has no splits or dividends, so the close is already the adjusted
-    close. Pairs Tiingo does not return are omitted.
+    close. Pairs Tiingo does not return are omitted, and so are all of them
+    when the allowance is used up.
     """
     if not tickers:
         return {}
@@ -165,7 +180,7 @@ def download_tiingo_crypto_prices(
             resampleFreq="1day",
         )
     except RestClientError as error:
-        if _status_code(error) == 404:
+        if _falls_back_to_yahoo(error):
             return {}
         raise _http_error(error, ", ".join(tickers)) from error
 
@@ -228,7 +243,7 @@ def download_tiingo_ohlcv(
             frequency="daily",
         )
     except RestClientError as error:
-        if _status_code(error) == 404:
+        if _falls_back_to_yahoo(error):
             return None
         raise _http_error(error, ticker) from error
     return _ohlcv_frame(records or [], _STOCK_OHLCV_FIELDS)
@@ -247,7 +262,7 @@ def download_tiingo_crypto_ohlcv(
             resampleFreq="1day",
         )
     except RestClientError as error:
-        if _status_code(error) == 404:
+        if _falls_back_to_yahoo(error):
             return None
         raise _http_error(error, ticker) from error
     for item in response or []:

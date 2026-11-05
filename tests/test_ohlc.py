@@ -140,6 +140,18 @@ class DownloadOhlcvTests(unittest.TestCase):
         self.assertEqual(frame.iloc[0]["close"], 1.0)
         download.assert_called_once()
 
+    @_with_tiingo_key()
+    @patch(_CLIENT)
+    @patch(_YF_DOWNLOAD)
+    def test_tiingo_rate_limit_falls_back_to_yahoo(self, download, client) -> None:
+        response = requests.Response()
+        response.status_code = 429
+        client.return_value.get_ticker_price.side_effect = RestClientError(HTTPError("429", response=response))
+        download.return_value = _yahoo_ohlcv(pd.DatetimeIndex(["2025-01-02"]), "AAPL", [[1, 1, 1, 1, 0]])
+        frame = download_ohlcv("AAPL", date(2025, 1, 2), date(2025, 1, 2))
+        self.assertEqual(frame.iloc[0]["close"], 1.0)
+        download.assert_called_once()
+
 
 class OhlcEntryTests(unittest.TestCase):
     def test_full_ohlcv(self) -> None:

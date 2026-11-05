@@ -7,9 +7,16 @@ import unittest
 from unittest.mock import patch
 
 from flask import request
-from flask_migrate import upgrade
+from flask_migrate import downgrade, upgrade
 
 from optimizacion_portafolios.storage import MIGRATIONS_DIRECTORY, db
+from optimizacion_portafolios.storage.models import (
+    DecisionRecord,
+    Holding,
+    Portfolio,
+    Transaction,
+    User,
+)
 from optimizacion_portafolios.web import create_app, database_url
 
 
@@ -78,6 +85,70 @@ class MigrationLoggingTests(unittest.TestCase):
                 upgrade(directory=MIGRATIONS_DIRECTORY)
                 db.engine.dispose()
         self.assertFalse(mail_logger.disabled)
+
+
+class GestorPortfolioMigrationTests(unittest.TestCase):
+    PREVIOUS = "b8938e7ff6a1"
+    NAME = "HRP · 16 activos · 2026-11-01"
+
+    def _migrate(self, roles):
+        """Portfolios after the migration, with one user per role in ``roles``."""
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            uri = "sqlite:///" + os.path.join(folder, "atlas.db")
+            app = create_app({"TESTING": True, "SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": uri})
+            with app.app_context():
+                db.drop_all()
+                upgrade(directory=MIGRATIONS_DIRECTORY, revision=self.PREVIOUS)
+                for index, role in enumerate(roles):
+                    db.session.add(User(email=f"{index}@test.local", password_hash="x", role=role))
+                db.session.commit()
+                upgrade(directory=MIGRATIONS_DIRECTORY)
+                result = self._summary()
+                # Running it again must not duplicate the portfolio.
+                downgrade(directory=MIGRATIONS_DIRECTORY, revision=self.PREVIOUS)
+                upgrade(directory=MIGRATIONS_DIRECTORY)
+                result["after_rerun"] = Portfolio.query.count()
+                db.session.remove()
+                db.engine.dispose()
+        return result
+
+    def _summary(self):
+        portfolios = Portfolio.query.all()
+        if not portfolios:
+            return {"portfolios": 0}
+        portfolio = portfolios[0]
+        version = portfolio.versions[0]
+        return {
+            "portfolios": len(portfolios),
+            "name": portfolio.name,
+            "owner": portfolio.user_id,
+            "gestor": str(User.query.filter_by(role="gestor").one().id),
+            "holdings": Holding.query.filter_by(version_id=version.id).count(),
+            "weight": sum(h.target_weight for h in Holding.query.filter_by(version_id=version.id)),
+            "transactions": Transaction.query.filter_by(version_id=version.id).count(),
+            "snapshots": portfolio.snapshots.count(),
+            "rules": len(portfolio.alert_rules),
+            "decision_portfolio": DecisionRecord.query.one().parametros["portfolio_id"],
+            "portfolio_id": portfolio.id,
+        }
+
+    def test_the_only_gestor_receives_the_whole_portfolio_once(self):
+        result = self._migrate(["novato", "gestor"])
+        self.assertEqual(result["portfolios"], 1)
+        self.assertEqual(result["after_rerun"], 1)
+        self.assertEqual(result["name"], self.NAME)
+        self.assertEqual(result["owner"], result["gestor"])
+        self.assertEqual((result["holdings"], result["transactions"]), (16, 16))
+        self.assertAlmostEqual(result["weight"], 1.0)
+        self.assertEqual((result["snapshots"], result["rules"]), (4, 7))
+        self.assertEqual(result["decision_portfolio"], result["portfolio_id"])
+
+    def test_nothing_is_added_without_exactly_one_gestor(self):
+        for roles in ([], ["novato"], ["gestor", "gestor"]):
+            with self.subTest(roles=roles):
+                result = self._migrate(roles)
+                self.assertEqual(result["portfolios"], 0)
+                self.assertEqual(result["after_rerun"], 0)
 
 
 if __name__ == "__main__":

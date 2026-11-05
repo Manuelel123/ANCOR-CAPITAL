@@ -1,0 +1,571 @@
+{
+  "portfolio": {
+    "name": "HRP · 16 activos · 2026-11-01",
+    "model": "hrp",
+    "benchmark": "SPY",
+    "initial_capital": 100000.0,
+    "commission_bps": 10.0,
+    "status": "active",
+    "tracking_start": "2026-10-30",
+    "created_at": "2026-11-01 18:56:07.962593",
+    "archived_at": null
+  },
+  "version": {
+    "number": 1,
+    "effective_date": "2026-10-30",
+    "reason": "fix",
+    "note": null,
+    "params": {
+      "universe": "Portafolio actual",
+      "tickers": [
+        "XLU",
+        "VST",
+        "WMT",
+        "COST",
+        "XLV",
+        "LLY",
+        "JNJ",
+        "UNH",
+        "WELL",
+        "XLE",
+        "XOM",
+        "WMB",
+        "XLF",
+        "JPM",
+        "AXP",
+        "BRK-B"
+      ],
+      "start_date": "2025-11-01",
+      "data_start": "2025-11-03",
+      "data_end": "2026-10-30",
+      "bounds": {
+        "min_weight": 0.0,
+        "max_weight": 1.0,
+        "asset_min_weights": {},
+        "asset_max_weights": {}
+      },
+      "metrics_at_fixing": {
+        "expected_return": 0.2194377612132541,
+        "volatility": 0.09323555373399638,
+        "sharpe": 2.1750515618902537,
+        "sortino": 3.503537098257405,
+        "max_drawdown": -0.0505531395954244
+      },
+      "price_date": "2026-10-30",
+      "currency": "USD"
+    },
+    "value_before": null,
+    "value_after": 99900.0,
+    "cost": 100.0,
+    "turnover": 1.0,
+    "created_at": "2026-11-01 18:56:07.966118"
+  },
+  "holdings": [
+    {
+      "ticker": "XLU",
+      "target_weight": 0.15855719030234194,
+      "units": 364.7216946787873,
+      "entry_price": 43.43000030517578
+    },
+    {
+      "ticker": "BRK-B",
+      "target_weight": 0.13561730450930917,
+      "units": 24.974043695491403,
+      "entry_price": 542.489990234375
+    },
+    {
+      "ticker": "XLF",
+      "target_weight": 0.09233617878380655,
+      "units": 163.2345520170952,
+      "entry_price": 56.5099983215332
+    },
+    {
+      "ticker": "COST",
+      "target_weight": 0.07853713330349887,
+      "units": 7.750681026938006,
+      "entry_price": 1012.280029296875
+    },
+    {
+      "ticker": "XLV",
+      "target_weight": 0.07578822379446626,
+      "units": 40.9544207120676,
+      "entry_price": 184.8699951171875
+    },
+    {
+      "ticker": "JNJ",
+      "target_weight": 0.06995255554876666,
+      "units": 25.579282529555957,
+      "entry_price": 273.20001220703125
+    },
+    {
+      "ticker": "WELL",
+      "target_weight": 0.06557493811361298,
+      "units": 27.923853994527953,
+      "entry_price": 234.60000610351562
+    },
+    {
+      "ticker": "XOM",
+      "target_weight": 0.0515693053827733,
+      "units": 27.512809654147144,
+      "entry_price": 187.25
+    },
+    {
+      "ticker": "XLE",
+      "target_weight": 0.04854485372255447,
+      "units": 69.2606558038648,
+      "entry_price": 70.0199966430664
+    },
+    {
+      "ticker": "WMT",
+      "target_weight": 0.044366933722840354,
+      "units": 35.885811693396384,
+      "entry_price": 123.51000213623047
+    },
+    {
+      "ticker": "AXP",
+      "target_weight": 0.04360336455802318,
+      "units": 13.650391148204122,
+      "entry_price": 319.1099853515625
+    },
+    {
+      "ticker": "JPM",
+      "target_weight": 0.03960123858136979,
+      "units": 11.737964734093433,
+      "entry_price": 337.0400085449219
+    },
+    {
+      "ticker": "WMB",
+      "target_weight": 0.038654497215926224,
+      "units": 51.93791998819107,
+      "entry_price": 74.3499984741211
+    },
+    {
+      "ticker": "UNH",
+      "target_weight": 0.024990264077303308,
+      "units": 6.134426060481823,
+      "entry_price": 406.9700012207031
+    },
+    {
+      "ticker": "LLY",
+      "target_weight": 0.01649838627955309,
+      "units": 1.1627105717714998,
+      "entry_price": 1417.5400390625
+    },
+    {
+      "ticker": "VST",
+      "target_weight": 0.01580763210385387,
+      "units": 11.412752062595432,
+      "entry_price": 138.3699951171875
+    }
+  ],
+  "transactions": [
+    {
+      "ticker": "XLU",
+      "side": "buy",
+      "units": 364.7216946787873,
+      "price": 43.43000030517578,
+      "amount": 15839.86331120396,
+      "cost": 15.855719030234194
+    },
+    {
+      "ticker": "BRK-B",
+      "side": "buy",
+      "units": 24.974043695491403,
+      "price": 542.489990234375,
+      "amount": 13548.168720479985,
+      "cost": 13.561730450930916
+    },
+    {
+      "ticker": "XLF",
+      "side": "buy",
+      "units": 163.2345520170952,
+      "price": 56.5099983215332,
+      "amount": 9224.384260502275,
+      "cost": 9.233617878380656
+    },
+    {
+      "ticker": "COST",
+      "side": "buy",
+      "units": 7.750681026938006,
+      "price": 1012.280029296875,
+      "amount": 7845.859617019538,
+      "cost": 7.853713330349887
+    },
+    {
+      "ticker": "XLV",
+      "side": "buy",
+      "units": 40.9544207120676,
+      "price": 184.8699951171875,
+      "amount": 7571.24355706718,
+      "cost": 7.578822379446626
+    },
+    {
+      "ticker": "JNJ",
+      "side": "buy",
+      "units": 25.579282529555957,
+      "price": 273.20001220703125,
+      "amount": 6988.260299321789,
+      "cost": 6.995255554876666
+    },
+    {
+      "ticker": "WELL",
+      "side": "buy",
+      "units": 27.923853994527953,
+      "price": 234.60000610351562,
+      "amount": 6550.936317549937,
+      "cost": 6.557493811361298
+    },
+    {
+      "ticker": "XOM",
+      "side": "buy",
+      "units": 27.512809654147144,
+      "price": 187.25,
+      "amount": 5151.773607739053,
+      "cost": 5.15693053827733
+    },
+    {
+      "ticker": "XLE",
+      "side": "buy",
+      "units": 69.2606558038648,
+      "price": 70.0199966430664,
+      "amount": 4849.630886883191,
+      "cost": 4.854485372255446
+    },
+    {
+      "ticker": "WMT",
+      "side": "buy",
+      "units": 35.885811693396384,
+      "price": 123.51000213623047,
+      "amount": 4432.256678911752,
+      "cost": 4.436693372284036
+    },
+    {
+      "ticker": "AXP",
+      "side": "buy",
+      "units": 13.650391148204122,
+      "price": 319.1099853515625,
+      "amount": 4355.976119346516,
+      "cost": 4.360336455802318
+    },
+    {
+      "ticker": "JPM",
+      "side": "buy",
+      "units": 11.737964734093433,
+      "price": 337.0400085449219,
+      "amount": 3956.163734278842,
+      "cost": 3.960123858136979
+    },
+    {
+      "ticker": "WMB",
+      "side": "buy",
+      "units": 51.93791998819107,
+      "price": 74.3499984741211,
+      "amount": 3861.5842718710296,
+      "cost": 3.8654497215926225
+    },
+    {
+      "ticker": "UNH",
+      "side": "buy",
+      "units": 6.134426060481823,
+      "price": 406.9700012207031,
+      "amount": 2496.5273813226004,
+      "cost": 2.4990264077303306
+    },
+    {
+      "ticker": "LLY",
+      "side": "buy",
+      "units": 1.1627105717714998,
+      "price": 1417.5400390625,
+      "amount": 1648.1887893273536,
+      "cost": 1.649838627955309
+    },
+    {
+      "ticker": "VST",
+      "side": "buy",
+      "units": 11.412752062595432,
+      "price": 138.3699951171875,
+      "amount": 1579.1824471750015,
+      "cost": 1.5807632103853868
+    }
+  ],
+  "snapshots": [
+    {
+      "day": "2026-10-30",
+      "value": 99900.0,
+      "benchmark_value": 100000.0,
+      "weights": {
+        "AXP": 0.04360336455802318,
+        "BRK-B": 0.13561730450930917,
+        "COST": 0.07853713330349887,
+        "JNJ": 0.06995255554876666,
+        "JPM": 0.03960123858136979,
+        "LLY": 0.01649838627955309,
+        "UNH": 0.024990264077303308,
+        "VST": 0.01580763210385387,
+        "WELL": 0.06557493811361298,
+        "WMB": 0.038654497215926224,
+        "WMT": 0.04436693372284036,
+        "XLE": 0.04854485372255446,
+        "XLF": 0.09233617878380655,
+        "XLU": 0.15855719030234194,
+        "XLV": 0.07578822379446627,
+        "XOM": 0.0515693053827733
+      },
+      "metrics": {
+        "cumulative_return": null,
+        "return_mtd": 0.0,
+        "return_ytd": 0.0,
+        "return_one_year": null,
+        "cagr": null,
+        "volatility": null,
+        "rolling_volatility_21": null,
+        "rolling_volatility_63": null,
+        "average_rolling_volatility_21": null,
+        "average_rolling_volatility_63": null,
+        "drawdown": 0.0,
+        "max_drawdown": 0.0,
+        "max_drawdown_days": 0,
+        "drawdown_days": 0,
+        "var_95": null,
+        "cvar_95": null,
+        "semideviation": null,
+        "sharpe": null,
+        "sortino": null,
+        "calmar": null,
+        "rolling_sharpe_126": null,
+        "negative_sharpe_days": 0,
+        "beta": null,
+        "alpha": null,
+        "tracking_error": null,
+        "information_ratio": null,
+        "upside_capture": null,
+        "downside_capture": null,
+        "herfindahl": 0.08625846832395881,
+        "effective_assets": 11.593064651279509,
+        "max_abs_drift": 1.3877787807814457e-17,
+        "average_correlation": null,
+        "max_risk_share": null,
+        "max_stale_days": 0,
+        "turnover": 0.0,
+        "observations": 0
+      },
+      "created_at": "2026-11-01 18:56:13.070892",
+      "updated_at": "2026-11-01 18:56:13.070896"
+    },
+    {
+      "day": "2026-11-02",
+      "value": 100419.99144245495,
+      "benchmark_value": 99520.98723634107,
+      "weights": {
+        "AXP": 0.04458330830790015,
+        "BRK-B": 0.1383022929416163,
+        "COST": 0.08031240996124905,
+        "JNJ": 0.06891785708539043,
+        "JPM": 0.03980996028877512,
+        "LLY": 0.016337115296901746,
+        "UNH": 0.02446195773720646,
+        "VST": 0.015298453425900882,
+        "WELL": 0.06645888939869668,
+        "WMB": 0.036819965802125085,
+        "WMT": 0.04563094775174786,
+        "XLE": 0.04638298645423624,
+        "XLF": 0.09356484603622714,
+        "XLU": 0.1586078181247841,
+        "XLV": 0.07528566976373369,
+        "XOM": 0.04922552162350904
+      },
+      "metrics": null,
+      "created_at": "2026-11-04 23:19:20.547384",
+      "updated_at": "2026-11-04 23:19:20.547407"
+    },
+    {
+      "day": "2026-11-03",
+      "value": 99931.69715020533,
+      "benchmark_value": 99818.71656561982,
+      "weights": {
+        "AXP": 0.04446239226841063,
+        "BRK-B": 0.1392179969029393,
+        "COST": 0.07905358804557082,
+        "JNJ": 0.06813091510024184,
+        "JPM": 0.03969909010774645,
+        "LLY": 0.016398210758469513,
+        "UNH": 0.024827030478114884,
+        "VST": 0.015941948991703647,
+        "WELL": 0.0673899874492061,
+        "WMB": 0.037665137611817834,
+        "WMT": 0.04483765009219827,
+        "XLE": 0.04621457137065034,
+        "XLF": 0.0934176449706173,
+        "XLU": 0.1584703929457385,
+        "XLV": 0.07541583791059789,
+        "XOM": 0.048857604995976696
+      },
+      "metrics": null,
+      "created_at": "2026-11-04 23:19:20.547411",
+      "updated_at": "2026-11-04 23:19:20.547412"
+    },
+    {
+      "day": "2026-11-04",
+      "value": 101324.70255707171,
+      "benchmark_value": 101467.47833660536,
+      "weights": {
+        "AXP": 0.044806285411346874,
+        "BRK-B": 0.14273142944748188,
+        "COST": 0.08004814958741771,
+        "JNJ": 0.06975660779200446,
+        "JPM": 0.04079019712148505,
+        "LLY": 0.016271569624228873,
+        "UNH": 0.024784788972647517,
+        "VST": 0.013548916714411585,
+        "WELL": 0.06834302525184167,
+        "WMB": 0.034784284514566804,
+        "WMT": 0.045747681599324,
+        "XLE": 0.04341919371427216,
+        "XLF": 0.09537146776727129,
+        "XLU": 0.15697567252755074,
+        "XLV": 0.07665865663760787,
+        "XOM": 0.045962073316541514
+      },
+      "metrics": {
+        "cumulative_return": 0.014261286857574662,
+        "return_mtd": 0.014261286857574662,
+        "return_ytd": 0.014261286857574662,
+        "return_one_year": null,
+        "cagr": 1.813497226418086,
+        "volatility": 0.14936201044352293,
+        "rolling_volatility_21": null,
+        "rolling_volatility_63": null,
+        "average_rolling_volatility_21": null,
+        "average_rolling_volatility_63": null,
+        "drawdown": 0.0,
+        "max_drawdown": -0.004862520751452437,
+        "max_drawdown_days": 1,
+        "drawdown_days": 0,
+        "var_95": null,
+        "cvar_95": null,
+        "semideviation": 0.04456573882364869,
+        "sharpe": 8.03218041498128,
+        "sortino": 26.919841265821795,
+        "calmar": 372.954136160014,
+        "rolling_sharpe_126": null,
+        "negative_sharpe_days": 0,
+        "beta": 0.5190976095016391,
+        "alpha": 0.5578899116861992,
+        "tracking_error": 0.14556799894778924,
+        "information_ratio": -0.2521034315052611,
+        "upside_capture": 0.4652708202688929,
+        "downside_capture": -1.086634832928976,
+        "herfindahl": 0.08796495057017331,
+        "effective_assets": 11.368164178097938,
+        "max_abs_drift": 0.007114124938172706,
+        "average_correlation": null,
+        "max_risk_share": 0.27029273529734343,
+        "max_stale_days": 0,
+        "turnover": 0.0,
+        "observations": 3
+      },
+      "created_at": "2026-11-04 23:19:20.547414",
+      "updated_at": "2026-11-04 23:19:20.547415"
+    }
+  ],
+  "alert_rules": [
+    {
+      "kind": "drawdown",
+      "yellow": 0.1,
+      "red": 0.15,
+      "enabled": true
+    },
+    {
+      "kind": "volatility",
+      "yellow": 1.5,
+      "red": 2.0,
+      "enabled": true
+    },
+    {
+      "kind": "weight_drift",
+      "yellow": 0.05,
+      "red": 0.1,
+      "enabled": true
+    },
+    {
+      "kind": "negative_sharpe",
+      "yellow": 63.0,
+      "red": 126.0,
+      "enabled": true
+    },
+    {
+      "kind": "risk_concentration",
+      "yellow": 0.3,
+      "red": 0.4,
+      "enabled": true
+    },
+    {
+      "kind": "correlation",
+      "yellow": 0.7,
+      "red": 0.85,
+      "enabled": true
+    },
+    {
+      "kind": "stale_price",
+      "yellow": 2.0,
+      "red": 5.0,
+      "enabled": true
+    }
+  ],
+  "decision": {
+    "fecha": "2026-11-01 18:56:07.994421",
+    "perfil_final": "gestor",
+    "rol": "gestor",
+    "metodo": "hrp",
+    "origen": "fijar",
+    "activos": {
+      "XLU": 0.15855719030234194,
+      "BRK-B": 0.13561730450930917,
+      "XLF": 0.09233617878380655,
+      "COST": 0.07853713330349887,
+      "XLV": 0.07578822379446626,
+      "JNJ": 0.06995255554876666,
+      "WELL": 0.06557493811361298,
+      "XOM": 0.0515693053827733,
+      "XLE": 0.04854485372255447,
+      "WMT": 0.044366933722840354,
+      "AXP": 0.04360336455802318,
+      "JPM": 0.03960123858136979,
+      "WMB": 0.038654497215926224,
+      "UNH": 0.024990264077303308,
+      "LLY": 0.01649838627955309,
+      "VST": 0.01580763210385387
+    },
+    "parametros": {
+      "universe": "Portafolio actual",
+      "tickers": [
+        "XLU",
+        "VST",
+        "WMT",
+        "COST",
+        "XLV",
+        "LLY",
+        "JNJ",
+        "UNH",
+        "WELL",
+        "XLE",
+        "XOM",
+        "WMB",
+        "XLF",
+        "JPM",
+        "AXP",
+        "BRK-B"
+      ],
+      "start_date": "2025-11-01",
+      "data_start": "2025-11-03",
+      "data_end": "2026-10-30",
+      "bounds": {
+        "min_weight": 0.0,
+        "max_weight": 1.0,
+        "asset_min_weights": {},
+        "asset_max_weights": {}
+      },
+      "name": "HRP · 16 activos · 2026-11-01"
+    }
+  }
+}

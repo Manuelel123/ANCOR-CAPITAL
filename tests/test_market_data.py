@@ -316,6 +316,30 @@ class MarketDataTests(unittest.TestCase):
         self.assertIn("500", str(raised.exception))
         download.assert_not_called()
 
+    @_with_tiingo_key()
+    @patch(_CLIENT)
+    @patch(_YF_DOWNLOAD)
+    def test_tiingo_rate_limit_sends_remaining_tickers_to_yahoo(self, download, client):
+        def ticker_price(ticker, **_kwargs):
+            if ticker == "MSFT":
+                raise _tiingo_http_error(429)
+            return _tiingo_records(["2025-01-02"], [10.0])
+
+        client.return_value.get_ticker_price.side_effect = ticker_price
+        client.return_value.get_crypto_price_history.side_effect = _tiingo_http_error(429)
+        download.return_value = _yahoo_close(
+            pd.DatetimeIndex(["2025-01-02"]),
+            {"MSFT": [1.0], "NVDA": [2.0], "BTC-USD": [3.0]},
+        )
+
+        result = download_prices(
+            ("AAPL", "MSFT", "NVDA", "BTC-USD"), date(2025, 1, 2), date(2025, 1, 3)
+        )
+
+        self.assertEqual(list(result.iloc[0]), [10.0, 1.0, 2.0, 3.0])
+        self.assertEqual(client.return_value.get_ticker_price.call_count, 2)
+        self.assertCountEqual(download.call_args.args[0], ["MSFT", "NVDA", "BTC-USD"])
+
     @patch.object(TiingoClient, "_request")
     def test_tiingo_client_requests_use_timeout(self, request):
         tiingo_prices._client("test-key").get_ticker_price("AAPL")
