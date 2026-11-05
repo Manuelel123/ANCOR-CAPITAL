@@ -72,7 +72,8 @@
                   {% if not original_mode() %}
                   <a href="{{ url_for('decisions.history') }}"{% if request.blueprint == 'decisions' %} aria-current="page"{% endif %}>Mi historial</a>
                   <a href="{{ url_for('onboarding.introduction') }}"{% if request.endpoint == 'onboarding.introduction' %} aria-current="page"{% endif %}>Introducción</a>
-                  <a href="{{ url_for('guia.interactive_brokers') }}"{% if request.blueprint == 'guia' %} aria-current="page"{% endif %}>Guía de Interactive Brokers</a>
+                  <a href="{{ url_for('guia.options') }}"{% if request.endpoint == 'guia.options' %} aria-current="page"{% endif %}>Opciones para tu perfil</a>
+                  <a href="{{ url_for('guia.interactive_brokers') }}"{% if request.endpoint == 'guia.interactive_brokers' %} aria-current="page"{% endif %}>Guía de Interactive Brokers</a>
                   <a href="{{ url_for('main.glossary') }}"{% if request.endpoint == 'main.glossary' %} aria-current="page"{% endif %}>Glosario</a>
                   {% endif %}
                   {% if can('backtest_history') %}<a href="{{ url_for('account.backtests') }}"{% if request.endpoint and request.endpoint.startswith('account.backtest') %} aria-current="page"{% endif %}>Historial de backtests</a>{% endif %}
@@ -105,6 +106,7 @@
                     <a href="{{ url_for('profile.mine') }}">Mi perfil</a>
                     <a href="{{ url_for('decisions.history') }}">Mi historial</a>
                     <a href="{{ url_for('onboarding.introduction') }}">Introducción</a>
+                    <a href="{{ url_for('guia.options') }}">Opciones para tu perfil</a>
                     <a href="{{ url_for('guia.interactive_brokers') }}">Guía de Interactive Brokers</a>
                     <a href="{{ url_for('main.glossary') }}">Glosario</a>
                     {% endif %}

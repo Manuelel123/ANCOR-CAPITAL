@@ -1,8 +1,9 @@
-"""Questionnaire wizard, profile result, role confirmation and "Mi perfil".
+"""Questionnaire wizard, profile result and "Mi perfil".
 
 The wizard has one step per block of the questionnaire. Every submitted step is stored in the user's
 draft (``perfil_borradores``), so an unfinished questionnaire resumes where it
-was left; completing the last step saves a new current profile.
+was left; completing the last step saves a new current profile and assigns the
+role from the diagnosis (the gestor keeps theirs).
 """
 
 from __future__ import annotations
@@ -34,17 +35,14 @@ from optimizacion_portafolios.storage.profiles import (
     save_draft,
     save_profile,
 )
-from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE, SELECTABLE_ROLES, canonical_role
+from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE, canonical_role
+from optimizacion_portafolios.web.guia.journey import build_journey
 from optimizacion_portafolios.web.profile import bp
 from optimizacion_portafolios.web.profile.access import get_questionnaire, refresh_profile_session
 
 logger = logging.getLogger(__name__)
 
 DISCLAIMER = "Información educativa. No es recomendación de inversión ni asesoría financiera."
-ROLE_DESCRIPTIONS = {
-    "novato": "HRP y Black-Litterman guiados, sin parámetros avanzados. Ideal para empezar.",
-    "inversionista": "Además: límites de peso, excluir activos, comparar HRP con Black-Litterman, fijar y rebalancear portafolios.",
-}
 ROLE_LABELS = {"novato": "Novato", "inversionista": "Inversionista", "gestor": "Gestor"}
 
 
@@ -190,6 +188,10 @@ def save_step():
         return redirect(url_for("profile.questionnaire", paso=0))
     try:
         profile = save_profile(current_user.id, result)
+        if not _is_gestor():
+            current_user.role = result.suggested_role
+            current_user.role_confirmed = True
+            db.session.commit()
     except IntegrityError:
         # Two submissions at once: the other one already stored the profile.
         refresh_profile_session(current_user)
@@ -270,35 +272,12 @@ def result():
     profile = get_current_profile(current_user.id)
     if profile is None:
         return redirect(url_for("profile.questionnaire"))
-    view = _profile_view(get_questionnaire(), profile)
-    selected = current_user.role if current_user.role_confirmed else canonical_role(profile.rol_sugerido)
     return render_template(
         "profile/result.html",
-        view=view,
+        view=_profile_view(get_questionnaire(), profile),
+        journey=None if _is_gestor() else build_journey(profile),
         disclaimer=DISCLAIMER,
-        is_gestor=_is_gestor(),
-        roles=[(role, ROLE_LABELS.get(role, role), ROLE_DESCRIPTIONS.get(role, "")) for role in SELECTABLE_ROLES],
-        role_labels=ROLE_LABELS,
-        selected_role=selected if selected in SELECTABLE_ROLES else SELECTABLE_ROLES[0],
     )
-
-
-@bp.post("/rol")
-def confirm_role():
-    if _is_gestor():
-        flash("Tu rol de gestor lo asigna la administración; no necesitas confirmarlo.", "info")
-        return redirect(url_for("profile.result"))
-    if get_current_profile(current_user.id) is None:
-        return redirect(url_for("profile.questionnaire"))
-    role = request.form.get("rol", "")
-    if role not in SELECTABLE_ROLES:
-        flash("Elige novato o inversionista.", "error")
-        return redirect(url_for("profile.result"))
-    current_user.role = role
-    current_user.role_confirmed = True
-    db.session.commit()
-    flash(f"Listo: usarás Atlas como {ROLE_LABELS.get(role, role).lower()}.", "success")
-    return redirect(url_for("main.index"))
 
 
 @bp.get("/")

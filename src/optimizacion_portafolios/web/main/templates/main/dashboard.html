@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros/learning.html" import educational_notice %}
+{% from "guia/_journey.html" import journey_card %}
 {% block title %}Inicio{% endblock %}
 
 {% block content %}
@@ -21,12 +22,9 @@
       <header class="card__header"><div><h2 class="card__title">Completa tu perfil de riesgo</h2><p class="card__subtitle">Antes de usar las herramientas necesitamos conocer tu tolerancia, tu capacidad de asumir pérdidas y tu horizonte.</p></div></header>
       <div class="card__footer"><a class="button button-primary" href="{{ url_for('profile.questionnaire') }}">Responder el cuestionario</a></div>
     </article>
-  {% elif pending_step == "profile.result" %}
-    <article class="card account-section">
-      <header class="card__header"><div><h2 class="card__title">Confirma tu rol</h2><p class="card__subtitle">Elige cómo quieres usar Atlas para desbloquear las herramientas.</p></div></header>
-      <div class="card__footer"><a class="button button-primary" href="{{ url_for('profile.result') }}">Ver mi resultado y elegir rol</a></div>
-    </article>
   {% endif %}
+
+  {% if journey %}{{ journey_card(journey) }}{% endif %}
 
   {% if profile %}
     <article class="card account-section dashboard-profile" aria-labelledby="perfil-vigente">

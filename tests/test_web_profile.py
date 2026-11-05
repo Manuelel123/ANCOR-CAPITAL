@@ -17,7 +17,7 @@ QUESTIONNAIRE_PATH = "/perfil/cuestionario"
 STEPS = (
     {"k1": "3", "capital_rango": "5m_30m", "aporte": "3"},
     {"horizonte": "de_3_a_5", "p2": "3", "p1": "3"},
-    {"p6": "1", "decision": "2"},
+    {"p6": "1"},
 )
 
 
@@ -110,7 +110,7 @@ class MandatoryProfileTests(ProfileTestCase):
 
 
 class QuestionnaireFlowTests(ProfileTestCase):
-    def test_complete_questionnaire_saves_profile_and_asks_for_the_role(self):
+    def test_complete_questionnaire_saves_profile_and_assigns_the_role(self):
         self.sign_in_new()
         response = self.complete_questionnaire()
         self.assertEqual(path_of(response), "/perfil/resultado")
@@ -135,15 +135,11 @@ class QuestionnaireFlowTests(ProfileTestCase):
         self.assertIn("Factor limitante: Puntaje de riesgo.", result)
         self.assertIn("6 de 9", result)
         self.assertIn("Entre 3 y 5 años", result)
-        self.assertIn('value="inversionista" checked', result)
-        self.assertNotIn('value="gestor"', result)
+        self.assertNotIn('name="rol"', result)
 
-        # Profile done but the role is not confirmed yet: the tools still wait.
-        self.assertEqual(path_of(self.client.get("/hrp")), "/perfil/resultado")
-        response = self.post("/perfil/rol", rol="novato")
-        self.assertEqual(path_of(response), "/")
+        # The role comes from the diagnosis: nothing left to confirm.
         user = self.user("nuevo@example.com")
-        self.assertEqual((user.role, user.role_confirmed), ("novato", True))
+        self.assertEqual((user.role, user.role_confirmed), ("inversionista", True))
         self.assertEqual(self.client.get("/hrp").status_code, 200)
 
         # Next sign-in: no questionnaire, straight to the home page.
@@ -166,26 +162,23 @@ class QuestionnaireFlowTests(ProfileTestCase):
     def test_partial_progress_is_resumed_on_the_next_sign_in(self):
         self.sign_in_new()
         self.answer(0)
-        self.answer(1, p2="4")
-        self.post(QUESTIONNAIRE_PATH, paso="2", accion="siguiente", p6="2")  # incomplete step
+        self.post(QUESTIONNAIRE_PATH, paso="1", accion="siguiente", p2="4")  # incomplete step
         with self.app.app_context():
             draft = db.session.scalars(select(ProfileDraft)).one()
-            self.assertEqual(draft.paso, 2)
+            self.assertEqual(draft.paso, 1)
             self.assertEqual(draft.datos["capital_rango"], "5m_30m")
             self.assertEqual(draft.datos["respuestas"]["p2"], 4)
-            self.assertEqual(draft.datos["respuestas"]["p6"], 2)
         self.post("/auth/salir")
         self.refresh_csrf()
         response = self.post("/auth/ingresar", email="nuevo@example.com", password=TEST_PASSWORD)
         self.assertEqual(path_of(response), QUESTIONNAIRE_PATH)
         html = self.client.get(QUESTIONNAIRE_PATH).data.decode()
-        self.assertIn("Paso 3 de 3", html)
-        self.assertIn('name="p6" value="2" checked', html)
-        previous = self.client.get(QUESTIONNAIRE_PATH + "?paso=1").data.decode()
-        self.assertIn('name="p2" value="4" checked', previous)
+        self.assertIn("Paso 2 de 3", html)
+        self.assertIn('name="p2" value="4" checked', html)
         # Steps not reached yet cannot be opened.
-        self.assertIn("Paso 3 de 3", self.client.get(QUESTIONNAIRE_PATH + "?paso=3").data.decode())
+        self.assertIn("Paso 2 de 3", self.client.get(QUESTIONNAIRE_PATH + "?paso=2").data.decode())
         self.refresh_csrf()
+        self.answer(1)
         response = self.answer(2)
         self.assertEqual(path_of(response), "/perfil/resultado")
         self.assertEqual(len(self.profiles("nuevo@example.com")), 1)
@@ -288,20 +281,20 @@ class VersionOneProfileTests(ProfileTestCase):
         self.assertIn("Paso 1 de 3", self.client.get(QUESTIONNAIRE_PATH).data.decode())
 
 
-class RoleConfirmationTests(ProfileTestCase):
-
-    def test_nobody_can_choose_gestor(self):
+class AssignedRoleTests(ProfileTestCase):
+    def test_the_role_follows_the_diagnosis(self):
         self.sign_in_new()
-        self.complete_questionnaire()
-        response = self.post("/perfil/rol", rol="gestor")
-        self.assertEqual(path_of(response), "/perfil/resultado")
+        self.complete_questionnaire(k1="1")
         user = self.user("nuevo@example.com")
-        self.assertEqual((user.role, user.role_confirmed), ("novato", False))
-        self.post("/perfil/rol", rol="inversionista")
-        user = self.user("nuevo@example.com")
-        self.assertEqual((user.role, user.role_confirmed), ("inversionista", True))
-        self.post("/perfil/rol", rol="gestor")
+        self.assertEqual((user.role, user.role_confirmed), ("novato", True))
+        self.post("/perfil/repetir")
+        self.complete_questionnaire(k1="4")
         self.assertEqual(self.user("nuevo@example.com").role, "inversionista")
+
+    def test_the_role_can_no_longer_be_chosen(self):
+        self.sign_in()
+        self.assertEqual(self.post("/perfil/rol", rol="gestor").status_code, 404)
+        self.assertEqual(self.client.get("/perfil/resultado").status_code, 200)
 
     def test_gestor_skips_the_questionnaire(self):
         """The gestor uses the original app: no questionnaire, no role step."""
@@ -309,17 +302,21 @@ class RoleConfirmationTests(ProfileTestCase):
         self.assertNotEqual(path_of(response), QUESTIONNAIRE_PATH)
         self.assertEqual(self.user("jefa@example.com").role, "gestor")
         self.assertEqual(self.client.get("/hrp").status_code, 200)
-        self.post("/perfil/rol", rol="novato")
-        user = self.user("jefa@example.com")
-        self.assertEqual((user.role, user.role_confirmed), ("gestor", True))
-        self.assertEqual(self.client.get("/hrp").status_code, 200)
 
-    def test_former_gestor_must_confirm_a_role(self):
+    def test_the_gestor_keeps_the_role_when_repeating(self):
+        create_test_user(self.app, "jefa@example.com", role="gestor", role_confirmed=True)
+        self.post("/auth/ingresar", email="jefa@example.com", password=TEST_PASSWORD)
+        self.refresh_csrf()
+        self.post("/perfil/repetir")
+        self.complete_questionnaire(k1="1")
+        self.assertEqual(self.user("jefa@example.com").role, "gestor")
+
+    def test_a_former_gestor_is_not_stopped(self):
         create_test_user(self.app, "ex@example.com", role="gestor", role_confirmed=True)  # profiled
         result = self.app.test_cli_runner().invoke(args=["users", "revoke-gestor", "ex@example.com"])
         self.assertEqual(result.exit_code, 0, result.output)
         response = self.post("/auth/ingresar", email="ex@example.com", password=TEST_PASSWORD)
-        self.assertEqual(path_of(response), "/perfil/resultado")
+        self.assertEqual(path_of(response), "/")
 
 
 if __name__ == "__main__":

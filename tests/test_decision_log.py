@@ -13,11 +13,9 @@ from optimizacion_portafolios.storage.profiles import get_current_profile
 from optimizacion_portafolios.web.common import guided
 from support import add_test_profile
 from test_tracking import _prices
-from test_web_roles import MARKET_CAPS, RoleTestCase, priced
+from test_web_roles import RoleTestCase, priced
 
 HRP_PRICES = "optimizacion_portafolios.web.hrp.services.download_prices"
-BL_PRICES = "optimizacion_portafolios.web.black_litterman.services.download_prices"
-BL_CAPS = "optimizacion_portafolios.web.black_litterman.services.fetch_market_cap_usd"
 COMPARE_PRICES = "optimizacion_portafolios.web.compare.services.download_prices"
 PORTFOLIO_PRICES = "optimizacion_portafolios.web.portfolios.services.download_prices"
 
@@ -54,15 +52,6 @@ class NovatoDecisionTests(DecisionLogMixin, RoleTestCase):
         self.assertEqual(row.parametros["max_weight"], 1.0)
         self.assertIsNotNone(row.fecha)
 
-    @patch(BL_CAPS, side_effect=MARKET_CAPS.__getitem__)
-    @patch(BL_PRICES, side_effect=priced)
-    def test_guided_black_litterman_stores_the_neutral_views(self, _download, _caps):
-        self.post("/black-litterman", action="optimize", universe="Acciones y Bitcoin")
-        (row,) = self.records()
-        self.assertEqual((row.metodo, row.origen), ("black_litterman", "black_litterman"))
-        self.assertEqual(set(row.parametros["views"]), set(row.activos))
-        self.assertEqual(row.parametros["objective"], "Máximo ratio de Sharpe")
-        self.assertEqual(row.parametros["risk_free_rate"], 0.02)
 
     @patch(HRP_PRICES, side_effect=priced)
     def test_new_profile_is_used_by_later_rows(self, _download):
@@ -117,20 +106,6 @@ class NovatoDecisionTests(DecisionLogMixin, RoleTestCase):
 class InversionistaDecisionTests(DecisionLogMixin, RoleTestCase):
     role = "inversionista"
 
-    @patch(COMPARE_PRICES, side_effect=priced)
-    @patch(BL_CAPS, side_effect=MARKET_CAPS.__getitem__)
-    @patch(BL_PRICES, side_effect=priced)
-    @patch(HRP_PRICES, side_effect=priced)
-    def test_comparison_inserts_one_row_per_method(self, *_mocks):
-        self.post("/comparar", action="optimize", universe="Acciones y Bitcoin",
-                  tickers=["AAPL", "MSFT", "GOOGL"], max_weight="60")
-        rows = self.records()
-        self.assertEqual([(row.metodo, row.origen) for row in rows], [("hrp", "comparar"), ("black_litterman", "comparar")])
-        profile_id = self.current_profile_id()
-        for row in rows:
-            self.assertEqual(row.perfil_id, profile_id)
-            self.assertEqual(set(row.activos), {"AAPL", "MSFT", "GOOGL"})
-        self.assertEqual(rows[0].parametros["max_weight"], 0.6)
 
     @patch(PORTFOLIO_PRICES, side_effect=_prices)
     @patch(HRP_PRICES, side_effect=_prices)

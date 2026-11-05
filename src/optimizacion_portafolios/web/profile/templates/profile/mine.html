@@ -10,7 +10,6 @@
     </div>
     <div class="page-header__actions">
       <a class="button button-secondary" href="{{ url_for('decisions.history') }}">Mi historial de decisiones</a>
-      {% if not is_gestor %}<a class="button button-secondary" href="{{ url_for('profile.result') }}">Cambiar rol</a>{% endif %}
     </div>
   </header>
   {{ disclaimer_notice(disclaimer) }}

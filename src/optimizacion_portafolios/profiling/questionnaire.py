@@ -9,7 +9,7 @@ message when the file is malformed. No Flask imports.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from functools import lru_cache
 from pathlib import Path
@@ -25,6 +25,9 @@ SUGGESTABLE_ROLES = ("novato", "inversionista")
 VETO_FACTOR = "veto"
 HORIZON_FACTOR = "horizonte"
 SCORE_FACTOR = "tolerancia"
+INVESTS_ROUTE = "ya_invierte"
+STARTS_ROUTE = "empieza_de_cero"
+CATEGORY_ROUTES = (STARTS_ROUTE, INVESTS_ROUTE)
 CAPITAL_FIELD = "capital_rango"
 HORIZON_FIELD = "horizonte"
 PRIOR_FIELDS = (CAPITAL_FIELD, HORIZON_FIELD)
@@ -36,6 +39,13 @@ class QuestionnaireError(ValueError):
 
 @dataclass(frozen=True)
 class Level:
+    id: str
+    label: str
+    description: str
+
+
+@dataclass(frozen=True)
+class Category:
     id: str
     label: str
     description: str
@@ -104,6 +114,10 @@ class Questionnaire:
     explanations: dict
     role_rule: RoleRule
     capital_levels: tuple[str, ...] = ()
+    categories: tuple[Category, ...] = ()
+    # "ya_invierte" or "empieza_de_cero" -> risk level -> category id.
+    category_matrix: dict = field(default_factory=dict)
+    legacy_fund_complete_from: int = 1
     # Choices of earlier versions, for the saved profiles that still use them.
     legacy_capital: tuple[Choice, ...] = ()
     legacy_horizon: tuple[Choice, ...] = ()
@@ -163,6 +177,12 @@ class Questionnaire:
     def capital_level(self, choice_id: str) -> str:
         """``bajo``, ``medio`` or ``alto``: which instruments to show, never a limit."""
         return _find_choice((*self.capital_options, *self.legacy_capital), choice_id).capital_level
+
+    def category(self, category_id: str) -> Category:
+        for category in self.categories:
+            if category.id == category_id:
+                return category
+        raise KeyError(category_id)
 
     @property
     def steps(self) -> tuple[str, ...]:
@@ -384,6 +404,21 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
         if role not in SUGGESTABLE_ROLES:
             _fail(source, f"rol_sugerido: «{role}» no es un rol sugerible ({', '.join(SUGGESTABLE_ROLES)}).")
 
+    raw_categories = _mapping(source, data.get("categorias"), "categorias")
+    categories = []
+    for raw in _sequence(source, raw_categories.get("niveles"), "categorias.niveles"):
+        raw = _mapping(source, raw, "categorias.niveles")
+        category_id = _identifier(source, raw.get("id"), "una categoría")
+        categories.append(Category(category_id, _text(source, raw.get("etiqueta"), f"categoría {category_id}"),
+                                   _text(source, raw.get("descripcion"), f"la descripción de {category_id}")))
+    category_ids = [category.id for category in categories]
+    matrix = _mapping(source, raw_categories.get("matriz"), "categorias.matriz")
+    for route in CATEGORY_ROUTES:
+        row = _mapping(source, matrix.get(route), f"categorias.matriz.{route}")
+        for level_id in level_ids:
+            if row.get(level_id) not in category_ids:
+                _fail(source, f"categorias.matriz.{route}.{level_id} debe ser una de: {', '.join(category_ids)}.")
+
     legacy = data.get("legado") or {}
     legacy_capital = tuple(
         capital_choice(choice_id, _mapping(source, raw, "legado.capital"), "legado.capital")
@@ -411,6 +446,9 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
         explanations=templates,
         role_rule=RoleRule(experience, min_experience, control, roles[0], roles[1]),
         capital_levels=capital_levels,
+        categories=tuple(categories),
+        category_matrix=matrix,
+        legacy_fund_complete_from=int(legacy.get("fondo_completo_desde") or 1),
         legacy_capital=legacy_capital,
         legacy_horizon=legacy_horizon,
         source=source,

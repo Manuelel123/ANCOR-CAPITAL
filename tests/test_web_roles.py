@@ -91,9 +91,9 @@ PAGES = {
     "/historial": ROLES,
     "/perfil/": ROLES,
     "/hrp": ROLES,
-    "/black-litterman": ROLES,
+    "/black-litterman": ("gestor",),
     "/portafolios/": ROLES,
-    "/comparar": ("inversionista", "gestor"),
+    "/comparar": ("gestor",),
     "/monitoring": ("gestor",),
     "/cuenta/backtests": ("gestor",),
     "/api/historial?ticker=%3C%3E": ("gestor",),
@@ -126,7 +126,7 @@ class PermissionTableTests(unittest.TestCase):
             "market": ("gestor",),
             "weight_limits": ("inversionista", "gestor"),
             "exclude_assets": ("inversionista", "gestor"),
-            "compare": ("inversionista", "gestor"),
+            "compare": ("gestor",),
             "fix_portfolio": ("inversionista", "gestor"),
             "manage_portfolio": ("inversionista", "gestor"),
             "edit_alerts": ("inversionista", "gestor"),
@@ -150,11 +150,9 @@ class MatrixMixin:
         html = self.client.get("/").data.decode()
         nav = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', html, re.S).group(1)
         links = set(re.findall(r'href="([^"]+)"', nav))
-        expected = {"/", "/hrp", "/black-litterman", "/portafolios/"}
-        if self.role == "inversionista":
-            expected.add("/comparar")
+        expected = {"/", "/hrp", "/portafolios/"}
         if self.role == "gestor":
-            expected.add("/monitoring")  # the original menu, without the new pages
+            expected |= {"/monitoring", "/black-litterman"}  # the original menu
         self.assertEqual(links, expected)
         self.assertEqual("/cuenta/backtests" in html, self.role == "gestor")
 
@@ -239,31 +237,6 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         self.assertEqual(response.mimetype, "text/html")
         self.assertNotIn("Content-Disposition", response.headers)
 
-    @patch("optimizacion_portafolios.web.black_litterman.services.fetch_market_cap_usd", side_effect=MARKET_CAPS.__getitem__)
-    @patch("optimizacion_portafolios.web.black_litterman.services.download_prices", side_effect=priced)
-    def test_guided_black_litterman_uses_neutral_views_and_fixed_inputs(self, _download, _caps):
-        from optimizacion_portafolios.web.black_litterman import services
-
-        with patch.object(services, "run_black_litterman", wraps=services.run_black_litterman) as run:
-            response = self.post(
-                "/black-litterman", action="optimize", universe="Acciones y Bitcoin",
-                objective="Mínima varianza", risk_free_rate="10", view_AAPL="50", view_MSFT="-20",
-                tickers=["AAPL"], custom_tickers="NVDA",
-            )
-        html = response.data.decode()
-        self.assertEqual(run.call_count, 2)
-        first, second = run.call_args_list
-        self.assertEqual(first.args[0], ["AAPL", "MSFT", "GOOGL", "BTC-USD"])
-        tickers, views, objective, risk_free, benchmark, start = second.args[:6]
-        self.assertEqual((objective, risk_free, benchmark, start), ("Máximo ratio de Sharpe", 0.02, "SPY", guided.guided_start()))
-        self.assertEqual(set(views), set(tickers))
-        self.assertNotIn(0.5, views.values())
-        self.assertEqual(notice_block(html), NOTICE)
-        self.assertIn("¿Por qué cada activo recibe ese peso?", html)
-        self.assertIn("por su tamaño (capitalización bursátil)", html)
-        self.assertIn("Equilibrio de mercado", html)
-        self.assertNotIn('name="view_', html)
-        self.assertNotIn('name="objective"', html)
 
 
 class InversionistaTests(MatrixMixin, RoleTestCase):
@@ -294,25 +267,6 @@ class InversionistaTests(MatrixMixin, RoleTestCase):
         self.assert_denied(self.client.get(f"/portafolios/{portfolio_id}/senales"))
         self.assertNotIn("/senales", self.client.get(f"/portafolios/{portfolio_id}").data.decode())
 
-    @patch("optimizacion_portafolios.web.compare.services.download_prices", side_effect=priced)
-    @patch("optimizacion_portafolios.web.black_litterman.services.fetch_market_cap_usd", side_effect=MARKET_CAPS.__getitem__)
-    @patch("optimizacion_portafolios.web.black_litterman.services.download_prices", side_effect=priced)
-    @patch("optimizacion_portafolios.web.hrp.services.download_prices", side_effect=priced)
-    def test_comparison_shows_both_methods_side_by_side(self, *_mocks):
-        html = self.post("/comparar", action="optimize", universe="Acciones y Bitcoin",
-                         tickers=["AAPL", "MSFT", "GOOGL"], max_weight="60").data.decode()
-        self.assertEqual(notice_block(html), NOTICE)
-        self.assertIn("Pesos lado a lado", html)
-        table = re.search(r'<table class="data-table compare-table".*?</table>', html, re.S).group(0)
-        self.assertEqual(len(re.findall(r"<tr>", table)), 4)  # header + 3 assets
-        for ticker in ("AAPL", "MSFT", "GOOGL"):
-            self.assertIn(ticker, table)
-        self.assertNotIn("BTC-USD", table)
-        metrics = re.search(r'<table class="data-table" id="compare-metrics">.*?</table>', html, re.S).group(0)
-        for label in ("Retorno anual compuesto", "Volatilidad anualizada", "Ratio de Sharpe", "Caída máxima"):
-            self.assertIn(label, metrics)
-        self.assertNotIn("N/D", metrics)
-        self.assertEqual(html.count("Establecer como portafolio óptimo"), 2)
 
 
 class GestorTests(MatrixMixin, RoleTestCase):
@@ -339,6 +293,14 @@ class GestorTests(MatrixMixin, RoleTestCase):
                 self.assertIsNone(notice_block(html), path)
                 self.assertNotIn("Mi perfil", html, path)
                 self.assertNotIn("Glosario", html, path)
+
+
+class OnlyHrpTests(unittest.TestCase):
+    def test_only_hrp_is_offered_to_novato_and_inversionista(self):
+        for endpoint in ("black_litterman.black_litterman", "compare.compare"):
+            for role in ("novato", "inversionista"):
+                self.assertFalse(permissions.role_allows(role, endpoint))
+            self.assertTrue(permissions.role_allows("gestor", endpoint))
 
 
 class PortadaTests(unittest.TestCase):

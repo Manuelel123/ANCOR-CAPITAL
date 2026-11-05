@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "profile/_macros.html" import disclaimer as disclaimer_notice, limiting_factor, profile_summary %}
+{% from "guia/_journey.html" import journey_card %}
 {% block title %}Tu perfil de riesgo{% endblock %}
 {% block content %}
   <header class="page-header">
@@ -14,37 +15,14 @@
   </header>
   {{ disclaimer_notice(disclaimer) }}
 
-  <div class="manage-grid">
-    <section class="card" aria-labelledby="resumen-perfil">
-      <header class="card__header"><div><h2 class="card__title" id="resumen-perfil">Resumen</h2><p class="card__subtitle">El perfil final es el más bajo entre tolerancia, capacidad y horizonte</p></div></header>
-      <div class="card__body form-stack">
-        {{ limiting_factor(view) }}
-        <p><a href="{{ url_for('guia.interactive_brokers') }}">Mira cómo abrir una cuenta en el broker de referencia</a></p>
-      </div>
-      {{ profile_summary(view) }}
-    </section>
+  {% if journey %}{{ journey_card(journey) }}{% endif %}
 
-    <section class="card" aria-labelledby="rol-titulo">
-      <header class="card__header"><div><h2 class="card__title" id="rol-titulo">¿Cómo quieres usar Atlas?</h2><p class="card__subtitle">Según tu experiencia te sugerimos: {{ role_labels.get(view.suggested_role, view.suggested_role) }}</p></div></header>
-      {% if is_gestor %}
-        <div class="card__body">
-          <p>Tu cuenta tiene el rol <strong>Gestor</strong>, asignado por la administración. No necesitas confirmar un rol.</p>
-        </div>
-        <div class="card__footer"><a class="button button-primary" href="{{ url_for('main.index') }}">Ir al inicio</a></div>
-      {% else %}
-        <form method="post" action="{{ url_for('profile.confirm_role') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <div class="card__body form-stack">
-            <fieldset class="check-list form-field">
-              <legend class="field-label">Elige tu rol (puedes cambiarlo después repitiendo este paso)</legend>
-              {% for role, label, description in roles %}
-                <label class="inline-check"><input type="radio" name="rol" value="{{ role }}"{% if role == selected_role %} checked{% endif %} required> <span><strong>{{ label }}</strong>{% if role == view.suggested_role %} <span class="badge badge--success">Sugerido</span>{% endif %}<br><span class="help-text">{{ description }}</span></span></label>
-              {% endfor %}
-            </fieldset>
-          </div>
-          <div class="card__footer"><button class="button button-primary" type="submit">Confirmar y continuar</button></div>
-        </form>
-      {% endif %}
-    </section>
-  </div>
+  <section class="card account-section" aria-labelledby="resumen-perfil">
+    <header class="card__header"><div><h2 class="card__title" id="resumen-perfil">Resumen</h2><p class="card__subtitle">Lo que respondiste y por qué tu perfil quedó así.</p></div></header>
+    <div class="card__body form-stack">
+      {{ limiting_factor(view) }}
+    </div>
+    {{ profile_summary(view) }}
+    <div class="card__footer"><a class="button button-primary" href="{{ url_for('main.index') }}">Ir al inicio</a></div>
+  </section>
 {% endblock %}

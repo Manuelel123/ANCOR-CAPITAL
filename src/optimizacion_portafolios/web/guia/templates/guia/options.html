@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "macros/learning.html" import educational_notice %}
+{% block title %}Opciones para tu perfil{% endblock %}
+{% block content %}
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Categoría {{ journey.category.label }}</p>
+      <h1>Opciones para tu perfil</h1>
+      <p class="lead">{{ journey.category.description }}</p>
+      <p class="help-text">Verificado el {{ catalog.verificado }}. {{ catalog.nota }}</p>
+    </div>
+  </header>
+  {{ educational_notice(always=True) }}
+
+  {% if not journey.fund_complete %}
+    <p class="notice notice--info" role="note">{{ catalog.fondo_incompleto }}</p>
+  {% endif %}
+
+  <div class="manage-grid account-section">
+    {% for option in options %}
+      <article class="card">
+        <header class="card__header">
+          <div>
+            <h2 class="card__title">{{ option.nombre }}</h2>
+            <p class="card__subtitle">Ejemplos: {{ option.ejemplos }}</p>
+          </div>
+        </header>
+        <div class="card__body">
+          <p>{{ option.que_es }}</p>
+          <dl class="metric-list">
+            <div><dt>Desde</dt><dd>{{ option.desde }}</dd></div>
+            <div><dt>Riesgo</dt><dd>{{ option.riesgo }}</dd></div>
+            <div><dt>Liquidez</dt><dd>{{ option.liquidez }}</dd></div>
+          </dl>
+          {% if option.advertencia %}<p class="notice notice--warning" role="note">{{ option.advertencia }}</p>{% endif %}
+          <p class="help-text">Fuente: <a href="{{ option.fuente.url }}" rel="noopener noreferrer" target="_blank">{{ option.fuente.titulo }}</a></p>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% endblock %}

@@ -33,11 +33,12 @@ GESTOR = "gestor"
 EVERYONE = frozenset({NOVATO, INVERSIONISTA, GESTOR})
 INVESTORS = frozenset({INVERSIONISTA, GESTOR})
 MANAGERS = frozenset({GESTOR})
+LEARNERS = frozenset({NOVATO, INVERSIONISTA})
 
 ROLE_LABELS = {NOVATO: "Novato", INVERSIONISTA: "Inversionista", GESTOR: "Gestor"}
 ROLE_SUMMARIES = {
-    NOVATO: "HRP y Black-Litterman guiados, con explicaciones y glosario. Mis portafolios en solo lectura.",
-    INVERSIONISTA: "Lo del novato, más límites de peso, excluir activos, comparar HRP con Black-Litterman, fijar y gestionar portafolios.",
+    NOVATO: "HRP guiado, con explicaciones y glosario. Mis portafolios en solo lectura.",
+    INVERSIONISTA: "Lo del novato, más límites de peso, excluir activos, fijar y gestionar portafolios.",
     GESTOR: "Acceso total: todos los parámetros, Mercado y Opciones, backtests, señales y gestión.",
 }
 
@@ -49,10 +50,12 @@ ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "onboarding.data_notice": EVERYONE,
     "onboarding.introduction": EVERYONE,
     "guia.interactive_brokers": EVERYONE,
+    # The gestor stays as in the original app: no diagnosis, no category.
+    "guia.options": LEARNERS,
     "decisions.history": EVERYONE,
     "hrp.hrp": EVERYONE,
-    "black_litterman.black_litterman": EVERYONE,
-    "compare.compare": INVESTORS,
+    "black_litterman.black_litterman": MANAGERS,
+    "compare.compare": MANAGERS,
     "monitoring.monitoring": MANAGERS,
     # JSON for the price explorer, shown only on the gestor's full pages.
     "history.asset_history": MANAGERS,
@@ -90,7 +93,7 @@ FEATURE_ROLES: dict[str, frozenset[str]] = {
     # Guided pages: choose the assets (exclude some) and a maximum weight.
     "weight_limits": INVESTORS,
     "exclude_assets": INVESTORS,
-    "compare": INVESTORS,
+    "compare": MANAGERS,
     "fix_portfolio": INVESTORS,
     "manage_portfolio": INVESTORS,
     "edit_alerts": INVESTORS,

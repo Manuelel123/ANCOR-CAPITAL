@@ -13,9 +13,11 @@ Rules (data in ``config/cuestionario.yaml``):
 5. Limiting factor: a veto if any applies; otherwise the first factor of
    ``factor_limitante.desempate`` whose level equals the final one (the
    horizon only counts when it imposes a cap).
-6. Suggested role: ``si_cumple`` when the experience answer is at least
+6. Role: ``si_cumple`` when the experience answer is at least
    ``experiencia_minima`` (and the control question, if any, is answered
-   correctly), else ``si_no``.
+   correctly), else ``si_no``. It is assigned when the profile is saved.
+7. Category: ``categorias.matriz`` by final profile and whether the person
+   already invests. Capital never changes it.
 """
 
 from __future__ import annotations
@@ -26,8 +28,11 @@ from fractions import Fraction
 
 from optimizacion_portafolios.profiling.questionnaire import (
     HORIZON_FACTOR,
+    INVESTS_ROUTE,
     SCORE_FACTOR,
+    STARTS_ROUTE,
     VETO_FACTOR,
+    Category,
     Questionnaire,
     Veto,
 )
@@ -116,11 +121,30 @@ def triggered_vetoes(questionnaire: Questionnaire, answers: Mapping[str, int]) -
 
 def suggest_role(questionnaire: Questionnaire, answers: Mapping[str, int]) -> str:
     rule = questionnaire.role_rule
-    experienced = answers.get(rule.experience_question, 0) >= rule.min_experience
+    experienced = already_invests(questionnaire, answers)
     knows = True
     if rule.control_question is not None:
         knows = answers.get(rule.control_question) == questionnaire.question(rule.control_question).correct
     return rule.if_met if experienced and knows else rule.otherwise
+
+
+def already_invests(questionnaire: Questionnaire, answers: Mapping[str, int]) -> bool:
+    """True when the experience answer says the person already invests."""
+    rule = questionnaire.role_rule
+    return answers.get(rule.experience_question, 0) >= rule.min_experience
+
+
+def category_for(questionnaire: Questionnaire, final_level: str, answers: Mapping[str, int]) -> Category:
+    """Diagnosis category from the final profile and whether the person invests."""
+    route = INVESTS_ROUTE if already_invests(questionnaire, answers) else STARTS_ROUTE
+    return questionnaire.category(questionnaire.category_matrix[route][final_level])
+
+
+def emergency_fund_complete(questionnaire: Questionnaire, version: str, answers: Mapping[str, int]) -> bool:
+    """Whether the fund is complete; version 1 measured it in months with other options."""
+    if version == questionnaire.version:
+        return not triggered_vetoes(questionnaire, answers)
+    return answers.get(questionnaire.capacity_question, 0) >= questionnaire.legacy_fund_complete_from
 
 
 def evaluate(questionnaire: Questionnaire, capital: str, horizon: str, answers: Mapping) -> ProfileResult:

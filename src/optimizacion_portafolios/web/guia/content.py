@@ -10,6 +10,8 @@ import yaml
 
 DEFAULT_PATH = Path(__file__).resolve().parents[4] / "config" / "guia_ibkr.yaml"
 PATH_ENV_VAR = "ATLAS_GUIA_IBKR_PATH"
+INSTRUMENTS_PATH = DEFAULT_PATH.with_name("instrumentos.yaml")
+INSTRUMENTS_ENV_VAR = "ATLAS_INSTRUMENTOS_PATH"
 OFFICIAL_LINK = "https://www.interactivebrokers.com"
 
 _TEXT_FIELDS = (
@@ -80,14 +82,50 @@ def parse_guide(data, source: str = "guia") -> dict:
     return data
 
 
-@lru_cache(maxsize=8)
-def _load_cached(path: str, _mtime_ns: int) -> dict:
+def parse_instruments(data, source: str = "instrumentos") -> dict:
+    """Check the catalog and return it; ``GuideError`` names what is wrong."""
+    if not isinstance(data, dict):
+        raise GuideError(f"{source}: el archivo debe ser un mapa YAML.")
+    for field in ("verificado", "nota", "fondo_incompleto", "hrp_destacado_desde"):
+        if not str(data.get(field) or "").strip():
+            raise GuideError(f"{source}: falta el texto de «{field}».")
+    steps = data.get("pasos")
+    if not isinstance(steps, dict) or not {"hrp_guiado", "hrp_libre"} <= set(steps):
+        raise GuideError(f"{source}: «pasos» debe incluir hrp_guiado y hrp_libre.")
+    for step_id, step in steps.items():
+        for key in ("titulo", "descripcion", "destino"):
+            if not isinstance(step, dict) or not str(step.get(key) or "").strip():
+                raise GuideError(f"{source}: falta «{key}» en el paso «{step_id}».")
+    journey = data.get("recorrido")
+    if not isinstance(journey, dict) or not journey:
+        raise GuideError(f"{source}: falta «recorrido».")
+    for category, step_ids in journey.items():
+        unknown = set(step_ids) - set(steps)
+        if unknown:
+            raise GuideError(f"{source}: el recorrido «{category}» usa pasos que no existen: {sorted(unknown)}.")
+    instruments = data.get("instrumentos")
+    if not isinstance(instruments, list) or not instruments:
+        raise GuideError(f"{source}: «instrumentos» debe ser una lista con contenido.")
+    for position, item in enumerate(instruments, start=1):
+        for key in ("nombre", "ejemplos", "desde", "que_es", "riesgo", "liquidez", "categorias", "capital"):
+            if not isinstance(item, dict) or not item.get(key):
+                raise GuideError(f"{source}: falta «{key}» en «instrumentos» número {position}.")
+        if not isinstance(item.get("riesgo_bajo"), bool):
+            raise GuideError(f"{source}: «riesgo_bajo» debe ser true o false en «instrumentos» número {position}.")
+        source_item = item.get("fuente")
+        if not isinstance(source_item, dict) or not source_item.get("url") or not source_item.get("titulo"):
+            raise GuideError(f"{source}: falta «fuente» en «instrumentos» número {position}.")
+    return data
+
+
+@lru_cache(maxsize=16)
+def _load_cached(path: str, _mtime_ns: int, parser) -> dict:
     try:
         with open(path, encoding="utf-8") as handle:
             data = yaml.safe_load(handle)
     except yaml.YAMLError as error:
         raise GuideError(f"{path}: el YAML no es válido: {error}") from error
-    return parse_guide(data, source=path)
+    return parser(data, source=path)
 
 
 def load_guide(path: str | os.PathLike | None = None) -> dict:
@@ -100,4 +138,14 @@ def load_guide(path: str | os.PathLike | None = None) -> dict:
         mtime = resolved.stat().st_mtime_ns
     except FileNotFoundError as error:
         raise GuideError(f"No se encontró la guía en {resolved}.") from error
-    return _load_cached(str(resolved), mtime)
+    return _load_cached(str(resolved), mtime, parse_guide)
+
+
+def load_instruments(path: str | os.PathLike | None = None) -> dict:
+    """Load the options catalog (``ATLAS_INSTRUMENTOS_PATH`` or ``config/instrumentos.yaml``)."""
+    resolved = Path(path or os.environ.get(INSTRUMENTS_ENV_VAR) or INSTRUMENTS_PATH)
+    try:
+        mtime = resolved.stat().st_mtime_ns
+    except FileNotFoundError as error:
+        raise GuideError(f"No se encontró el catálogo en {resolved}.") from error
+    return _load_cached(str(resolved), mtime, parse_instruments)

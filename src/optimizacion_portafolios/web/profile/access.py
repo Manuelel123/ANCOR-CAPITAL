@@ -4,15 +4,14 @@
 
 - the access check ``require_current_profile`` (``web.auth.guard``): a
   signed-in user who has not accepted the current data notice is sent to it,
-  then to the introduction the first time, one without a current profile to
-  the questionnaire, and one whose role is still unconfirmed to the result
-  page to confirm it. The ``gestor`` uses the original app: none of them.
-  The profiling pages (``profile.*``) and the broker guide, linked from the
-  result page, are exempt from the last two; sign-out, static files and the
-  home page never reach the checks.
+  then to the introduction the first time, and one without a current profile
+  to the questionnaire. The ``gestor`` uses the original app: none of them.
+  The profiling pages (``profile.*``) and the broker guide are exempt from the
+  questionnaire; sign-out, static files and the home page never reach the
+  checks.
 - an after-sign-in hook (``web.auth.session.register_after_login``) that loads
-  the saved profile into ``session["perfil"]`` and, when the profile or the
-  role is missing, redirects there instead of ``next``.
+  the saved profile into ``session["perfil"]`` and, when a step is pending,
+  redirects there instead of ``next``.
 - the ``current_profile`` template variable (the same summary).
 
 ``session["perfil"]`` is a small JSON-serializable summary of the current
@@ -36,7 +35,6 @@ from optimizacion_portafolios.web.auth.session import register_after_login, want
 PROFILE_SESSION_KEY = "perfil"
 PROFILE_ENDPOINT_PREFIX = "profile."
 QUESTIONNAIRE_MESSAGE = "Antes de usar las herramientas, completa tu perfil de riesgo."
-ROLE_MESSAGE = "Confirma cómo quieres usar Atlas para continuar."
 DATA_NOTICE_ENDPOINT = "onboarding.data_notice"
 DATA_NOTICE_MESSAGE = "Antes de continuar, revisa y acepta el aviso de tratamiento de datos."
 INTRODUCTION_ENDPOINT = "onboarding.introduction"
@@ -130,10 +128,6 @@ def current_profile() -> dict | None:
     return session_profile(current_user)
 
 
-def needs_role_confirmation(user: User) -> bool:
-    return user.role != GESTOR_ROLE and not user.role_confirmed
-
-
 def pending_onboarding_step(user: User) -> str | None:
     """Data notice, then the introduction once (neither for the gestor)."""
     if needs_data_notice(user):
@@ -155,13 +149,11 @@ def pending_profile_step(user: User) -> str | None:
         return None
     if session_profile(user) is None:
         return "profile.questionnaire"
-    if needs_role_confirmation(user):
-        return "profile.result"
     return None
 
 
 def require_current_profile(endpoint: str):
-    """Access check: no page without the notice, no tool without a profile and role."""
+    """Access check: no page without the notice, no tool without a profile."""
     if endpoint == DATA_NOTICE_ENDPOINT:
         return None
     step = pending_profile_step(current_user)
@@ -171,10 +163,7 @@ def require_current_profile(endpoint: str):
         return redirect(url_for(step))
     if step != DATA_NOTICE_ENDPOINT and (endpoint.startswith(PROFILE_ENDPOINT_PREFIX) or endpoint == GUIDE_ENDPOINT):
         return None
-    message = {
-        DATA_NOTICE_ENDPOINT: DATA_NOTICE_MESSAGE,
-        "profile.questionnaire": QUESTIONNAIRE_MESSAGE,
-    }.get(step, ROLE_MESSAGE)
+    message = DATA_NOTICE_MESSAGE if step == DATA_NOTICE_ENDPOINT else QUESTIONNAIRE_MESSAGE
     if wants_json():
         return jsonify({"error": message}), 403
     flash(message, "info")

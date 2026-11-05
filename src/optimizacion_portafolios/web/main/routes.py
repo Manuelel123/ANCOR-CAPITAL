@@ -3,6 +3,8 @@
 from flask import redirect, render_template, url_for
 from flask_login import current_user
 
+from optimizacion_portafolios.storage.profiles import get_current_profile
+
 from optimizacion_portafolios.data.catalogs import (
     ACTIVOS_HRP,
     ACTIVOS_OPCIONES,
@@ -16,6 +18,7 @@ from optimizacion_portafolios.web.auth.permissions import (
 from optimizacion_portafolios.web.auth.passwords import password_rules
 from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE
 from optimizacion_portafolios.web.common.guided import glossary as glossary_items
+from optimizacion_portafolios.web.guia.journey import build_journey
 from optimizacion_portafolios.web.main import bp
 from optimizacion_portafolios.web.profile.access import (
     current_profile,
@@ -111,6 +114,13 @@ TOOLS = (
         "description": "Cada portafolio que generaste, con fecha, perfil vigente, método, pesos y supuestos.",
     },
     {
+        "key": "options",
+        "endpoint": "guia.options",
+        "eyebrow": "Para ti",
+        "title": "Opciones para tu perfil",
+        "description": "Ejemplos de instrumentos según tu categoría y tu capital.",
+    },
+    {
         "key": "guide",
         "endpoint": "guia.interactive_brokers",
         "eyebrow": "Guía",
@@ -171,9 +181,11 @@ def index():
     # A user without a profile (or role) sees the pending step instead of the tools.
     step = pending_profile_step(current_user)
     tools = [] if step else [tool for tool in TOOLS if can_open(tool["endpoint"])]
+    saved_profile = get_current_profile(current_user.id)
     return render_template(
         "main/dashboard.html",
         profile=current_profile(),
+        journey=build_journey(saved_profile) if saved_profile else None,
         pending_step=step,
         role_label=role_label(current_user.role),
         role_summary=ROLE_SUMMARIES.get(current_user.role, ""),

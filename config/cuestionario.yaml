@@ -117,17 +117,11 @@ bloques:
         opciones: [Vendería todo, Vendería una parte, Esperaría, Invertiría más]
   - id: respaldo
     titulo: Tu respaldo
-    descripcion: Qué tan cubierto estás ante un imprevisto y cómo prefieres decidir.
+    descripcion: Qué tan cubierto estás ante un imprevisto.
     preguntas:
       - id: p6
         texto: ¿Tienes fondo de emergencia?
         opciones: ['Sí', Parcialmente, 'No']
-      - id: decision
-        texto: ¿Cómo prefieres decidir?
-        opciones:
-          - Que decidan por mí
-          - Que me expliquen y yo decido
-          - Que me den opciones y yo elijo
 
 # Respuestas que fuerzan el perfil más bajo, sin importar el resto. No bloquean nada.
 vetos:
@@ -166,7 +160,30 @@ factor_limitante:
       cuándo necesitas el dinero, qué quieres lograr y qué harías ante una caída.
       Tu perfil queda en «{perfil}».
 
-# Rol sugerido según la experiencia (el usuario lo confirma o cambia).
+# Categoría del diagnóstico: decide qué ve cada usuario. Sale del perfil final y de
+# si ya invierte (la misma regla de `rol_sugerido`). El capital no cambia la categoría.
+categorias:
+  niveles:
+    - id: inicial
+      etiqueta: Inicial
+      descripcion: Vamos paso a paso, con opciones sencillas y explicaciones claras.
+    - id: intermedio
+      etiqueta: Intermedio
+      descripcion: Ya puedes mirar opciones con algo más de variación y dar el salto a un broker.
+    - id: avanzado
+      etiqueta: Avanzado
+      descripcion: Inviertes y aceptas riesgo, así que puedes construir tu portafolio con HRP.
+  matriz:
+    empieza_de_cero:
+      adverso: inicial
+      moderado: inicial
+      arriesgado: intermedio
+    ya_invierte:
+      adverso: intermedio
+      moderado: avanzado
+      arriesgado: avanzado
+
+# Rol asignado según la experiencia, al guardar el perfil.
 rol_sugerido:
   experiencia: k1
   experiencia_minima: Invierto en fondos   # esta opción o una posterior
@@ -175,9 +192,11 @@ rol_sugerido:
   si_no: novato
 
 # Opciones de versiones anteriores: solo para mostrar los perfiles ya guardados.
+# En la versión 1 el fondo se medía en meses: desde la opción 3 (3 a 6 meses) es completo.
 # `nivel` decide el mensaje de la guía de IBKR. El rango de 20 a 100 millones
 # cruza el umbral de $30.000.000; ajústalo aquí si prefieres otro nivel.
 legado:
+  fondo_completo_desde: 3
   capital:
     menos_1m:
       texto: Menos de 1 millón de pesos
