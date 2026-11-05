@@ -1,4 +1,4 @@
-# Atlas · Analítica de portafolios
+# Ancor Capital · Inversión explicada
 
 Herramienta web **educativa** (Flask) para personas jóvenes e inexpertas que quieren aprender a construir portafolios: qué es diversificar, cómo se mide el riesgo y cómo reparten el dinero dos métodos profesionales, Hierarchical Risk Parity (HRP) y Black-Litterman. Cada usuario responde primero un perfil de riesgo y usa las herramientas según su rol (novato, inversionista o gestor). Los precios históricos se descargan de Tiingo (con Yahoo Finance como respaldo) y los datos fundamentales, capitalizaciones y tipos de cambio se consultan en Yahoo Finance.
 
@@ -52,7 +52,7 @@ Los correos salen por Gmail SMTP. Configura en `.env`:
 ```dotenv
 MAIL_USERNAME=tu-cuenta@gmail.com
 MAIL_PASSWORD=xxxx xxxx xxxx xxxx     # contraseña de aplicación, no la normal
-# MAIL_FROM=Atlas <tu-cuenta@gmail.com>   (opcional)
+# MAIL_FROM=Ancor Capital <tu-cuenta@gmail.com>   (opcional)
 # MAIL_SMTP_HOST=smtp.gmail.com  MAIL_SMTP_PORT=465   (valores por defecto)
 ```
 
@@ -62,14 +62,14 @@ La contraseña de aplicación se crea en tu cuenta de Google → Seguridad → V
 
 ```dotenv
 BREVO_API_KEY=xkeysib-...                # Brevo → SMTP & API → API Keys
-MAIL_FROM=Atlas <tu-cuenta@gmail.com>    # obligatorio: remitente verificado en Brevo
+MAIL_FROM=Ancor Capital <tu-cuenta@gmail.com>    # obligatorio: remitente verificado en Brevo
 ```
 
 En Brevo, registra y confirma ese correo en **Senders, Domains & Dedicated IPs → Senders** antes de enviar; si no, Brevo rechaza el envío (el motivo queda en el log del servidor). Con un remitente `@gmail.com` algunos mensajes pueden llegar a spam; un dominio propio autenticado en Brevo lo evita.
 
 ## Uso: flujo de pantallas y roles
 
-1. **Sin sesión** solo se ve la portada (`/`): qué es Atlas, para quién es, el aviso educativo y los formularios de inicio de sesión y registro. No muestra herramientas ni resultados (los diagramas de la portada están rotulados como ilustrativos).
+1. **Sin sesión** solo se ve la portada (`/`): qué es Ancor Capital, para quién es, el aviso educativo y los formularios de inicio de sesión y registro. No muestra herramientas ni resultados (los diagramas de la portada están rotulados como ilustrativos).
 2. **Aviso de tratamiento de datos** (`/aviso-datos`, pantalla 0): tras verificar el correo, el usuario acepta el aviso con una sola casilla antes de usar la app; el gestor no pasa por esta pantalla (ver «Aviso de datos» más abajo).
 3. **Introducción** (`/introduccion`): se abre sola una vez, después del aviso, y queda en el menú de usuario. Explica el recorrido. El gestor no la recibe automáticamente.
 4. **Perfil y diagnóstico:** si falta el perfil de riesgo la app lleva al cuestionario. El resultado muestra la categoría (Inicial, Intermedio o Avanzado) y «Tu recorrido», con los próximos pasos; el rol se asigna solo (ver «Perfil de riesgo obligatorio» más abajo).
@@ -164,7 +164,7 @@ Los portafolios fijados como óptimos, sus versiones, posiciones y operaciones s
 
   El comando termina con código 1 si algún portafolio falla (el resto se guarda igual).
 
-  **Programarlo en Windows (Programador de tareas):** abre «Programador de tareas» → «Crear tarea básica…», nombre `Atlas snapshot`, desencadenador «Diariamente» a las 18:30 (después del cierre de EE. UU.), acción «Iniciar un programa» con:
+  **Programarlo en Windows (Programador de tareas):** abre «Programador de tareas» → «Crear tarea básica…», nombre `Ancor Capital snapshot`, desencadenador «Diariamente» a las 18:30 (después del cierre de EE. UU.), acción «Iniciar un programa» con:
 
   - Programa: `powershell.exe`
   - Argumentos: `-NoProfile -Command "uv run flask --app wsgi:app portfolios snapshot *>> instance\snapshot.log"`
@@ -176,7 +176,7 @@ Los portafolios fijados como óptimos, sus versiones, posiciones y operaciones s
   $action = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory (Get-Location) `
     -Argument '-NoProfile -Command "uv run flask --app wsgi:app portfolios snapshot *>> instance\snapshot.log"'
   $trigger = New-ScheduledTaskTrigger -Daily -At 6:30pm
-  Register-ScheduledTask -TaskName "Atlas snapshot" -Action $action -Trigger $trigger
+  Register-ScheduledTask -TaskName "Ancor Capital snapshot" -Action $action -Trigger $trigger
   ```
 
 - **Alertas** (`analytics/alerts.py`): reglas por portafolio con semáforo verde/amarillo/rojo, editables al fijar el portafolio y en `/portafolios/<id>/alertas`. Un nivel se alcanza cuando el valor supera estrictamente su umbral:

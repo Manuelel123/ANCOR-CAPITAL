@@ -342,6 +342,20 @@ class PortadaTests(unittest.TestCase):
                               "metric-card__value", 'href="/hrp"', 'href="/portafolios/"'):
             self.assertNotIn(result_marker, html, result_marker)
 
+    def test_the_brand_is_ancor_capital(self):
+        html = self.client.get("/").data.decode()
+        self.assertIn("· Ancor Capital</title>", html)
+        self.assertIn('alt="Ancor Capital, inversión explicada"', html)
+        self.assertNotIn("Atlas", html)
+        self.assertNotIn("Portfolio Lab", html)
+
+    def test_every_logo_of_the_page_exists(self):
+        html = self.client.get("/").data.decode()
+        logos = set(re.findall(r'src="(/static/img/[^"]+)"', html)) | set(re.findall(r'href="(/static/img/[^"]+)"', html))
+        self.assertGreaterEqual(len(logos), 5)
+        for logo in logos:
+            self.assertEqual(self.client.get(logo).status_code, 200, logo)
+
     def test_portada_login_form_signs_in(self):
         create_test_user(self.app, "ana@example.com")
         token = csrf_from(self.client.get("/"))

@@ -46,7 +46,7 @@ pasos:
     destino: guia.interactive_brokers
   hrp_guiado:
     titulo: Arma un ejemplo guiado con HRP
-    descripcion: Atlas te acompaña y te explica por qué cada activo pesa lo que pesa.
+    descripcion: Ancor Capital te acompaña y te explica por qué cada activo pesa lo que pesa.
     destino: hrp.hrp
   hrp_bloqueado:
     titulo: Conoce qué te falta para optimizar tu portafolio

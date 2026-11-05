@@ -2,7 +2,7 @@
 
 With ``BREVO_API_KEY`` set, messages go through Brevo's HTTPS API (for hosts
 that block outgoing SMTP, such as Render's free plan). ``MAIL_FROM`` is then
-required and must be a sender verified in Brevo (``Atlas <you@gmail.com>`` or
+required and must be a sender verified in Brevo (``Ancor Capital <you@gmail.com>`` or
 just the address).
 
 Otherwise they go over SMTP, configured for Gmail by default:
@@ -66,7 +66,7 @@ def send_mail(to: str, subject: str, body: str) -> None:
             # Printed rather than logged: the migrations' logging config can
             # disable this module's logger at startup.
             print(
-                f"[Atlas] MAIL_USERNAME/MAIL_PASSWORD sin configurar; correo a {to} no enviado:\n{subject}\n{body}",
+                f"[Ancor Capital] MAIL_USERNAME/MAIL_PASSWORD sin configurar; correo a {to} no enviado:\n{subject}\n{body}",
                 file=sys.stderr,
                 flush=True,
             )
@@ -118,15 +118,15 @@ def _send_with_brevo(api_key: str, sender: str, to: str, subject: str, body: str
 def send_code(to: str, purpose: str, code: str) -> None:
     """Email with a verification or reset code (plain text, in Spanish)."""
     if purpose == "verify":
-        subject = "Atlas · Código para verificar tu correo"
-        intro = "Usa este código para verificar tu correo en Atlas:"
+        subject = "Ancor Capital · Código para verificar tu correo"
+        intro = "Usa este código para verificar tu correo en Ancor Capital:"
     else:
-        subject = "Atlas · Código para restablecer tu contraseña"
-        intro = "Usa este código para crear una contraseña nueva en Atlas:"
+        subject = "Ancor Capital · Código para restablecer tu contraseña"
+        intro = "Usa este código para crear una contraseña nueva en Ancor Capital:"
     send_mail(
         to,
         subject,
         f"{intro}\n\n    {code}\n\nVence en 15 minutos y solo sirve una vez.\n"
         "Si no lo pediste, ignora este mensaje: nadie puede entrar sin este código.\n\n"
-        "Atlas · Información educativa. No es recomendación de inversión ni asesoría financiera.\n",
+        "Ancor Capital · Información educativa. No es recomendación de inversión ni asesoría financiera.\n",
     )

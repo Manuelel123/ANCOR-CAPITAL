@@ -1,4 +1,4 @@
-"""Notices the user accepts before using Atlas (``config/avisos.yaml``).
+"""Notices the user accepts before using Ancor Capital (``config/avisos.yaml``).
 
 Pure module (no Flask). The text lives in the YAML file so it can change
 without touching the code; a new ``version`` asks every user to accept again.

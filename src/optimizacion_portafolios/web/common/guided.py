@@ -273,7 +273,7 @@ GLOSSARY: dict[str, str] = {
     "View": "Una opinión sobre el retorno anual de un activo. Black-Litterman la mezcla con el equilibrio según la confianza que tenga.",
     "HRP (Hierarchical Risk Parity)": "Método que agrupa los activos por su correlación y reparte el capital para equilibrar el riesgo de cada grupo, sin predecir retornos.",
     "Black-Litterman": "Método que parte del equilibrio de mercado, lo ajusta con views y busca el mejor portafolio para un objetivo (aquí, máximo Sharpe).",
-    "Perfil de riesgo": "Tu disposición y capacidad para asumir pérdidas, según el cuestionario de Atlas.",
+    "Perfil de riesgo": "Tu disposición y capacidad para asumir pérdidas, según el cuestionario de Ancor Capital.",
     "Horizonte": "El tiempo que piensas mantener la inversión. Horizontes cortos dejan menos tiempo para recuperarse de una caída.",
 }
 GUIDED_TERMS = (

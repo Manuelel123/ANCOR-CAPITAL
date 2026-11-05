@@ -6,10 +6,12 @@
   {% set check_icon %}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"/></svg>{% endset %}
   <section class="hero" aria-labelledby="hero-title">
     <div class="hero__copy">
+      <img class="hero__logo logo-light" src="{{ url_for('static', filename='img/ancor-vertical.png') }}" alt="Ancor Capital, inversión explicada">
+      <img class="hero__logo logo-dark" src="{{ url_for('static', filename='img/ancor-vertical-claro.png') }}" alt="Ancor Capital, inversión explicada">
       <p class="eyebrow">Laboratorio educativo de portafolios</p>
       <h1 id="hero-title" class="hero__title">Aprende a construir portafolios con <span class="text-accent">método</span>, no con intuición.</h1>
-      <p class="hero__lead">Atlas es una herramienta para aprender cómo se reparte el dinero entre varios activos y por qué. Está pensada para personas jóvenes que están empezando y quieren entender la diversificación, el riesgo y un método usado por profesionales: Hierarchical Risk Parity.</p>
-      {{ educational_notice("Atlas usa datos históricos y modelos con supuestos: sirve para aprender, no para decidir en qué invertir.") }}
+      <p class="hero__lead">Ancor Capital es una herramienta para aprender cómo se reparte el dinero entre varios activos y por qué. Está pensada para personas jóvenes que están empezando y quieren entender la diversificación, el riesgo y un método usado por profesionales: Hierarchical Risk Parity.</p>
+      {{ educational_notice("Ancor Capital usa datos históricos y modelos con supuestos: sirve para aprender, no para decidir en qué invertir.") }}
       <div class="hero__actions">
         <a class="button button-primary" href="{{ url_for('auth.register') }}">Crear cuenta gratis <span class="arrow" aria-hidden="true">→</span></a>
         <a class="button button-secondary" href="{{ url_for('auth.login') }}">Ya tengo cuenta</a>
@@ -23,7 +25,7 @@
 
     <div class="card auth-card landing-login" id="ingresar">
       <div class="card__body">
-        <p class="eyebrow">Cuenta Atlas</p>
+        <p class="eyebrow">Cuenta Ancor Capital</p>
         <h2 class="auth-card__title">Inicia sesión</h2>
         <p class="auth-card__lead">Ingresa con tu correo y contraseña.</p>
         <form method="post" action="{{ url_for('auth.login') }}" class="form-stack" novalidate>
@@ -43,7 +45,7 @@
     </div>
   </section>
 
-  <dl class="stats-strip" aria-label="Qué incluye Atlas">
+  <dl class="stats-strip" aria-label="Qué incluye Ancor Capital">
     {% for stat in stats %}
       <div class="stats-strip__item"><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div>
     {% endfor %}

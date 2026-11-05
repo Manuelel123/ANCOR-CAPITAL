@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#0b1f4b">
     <meta name="color-scheme" content="light dark">
-    <title>{% block title %}Portafolios{% endblock %} · Atlas</title>
+    <title>{% block title %}Portafolios{% endblock %} · Ancor Capital</title>
     <script>
       // Runs before first paint: enables JS styles and applies the saved theme (no flash).
       (function () {
@@ -20,8 +20,7 @@
         root.setAttribute("data-theme", theme);
       })();
     </script>
-    {# Favicon: same monogram as the navbar; a data URI cannot read CSS tokens. #}
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='8' fill='%234f46e5'/%3E%3Cpath d='M8.5 20.5 14 7.5l5.5 13M10.6 16h6.8' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -33,18 +32,16 @@
   <body>
     {# nav_items: only the pages the signed-in role may open (web.auth.permissions). #}
     {% macro brand_mark() -%}
-      <svg class="brand__mark" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
-        <rect class="brand__mark-bg" width="28" height="28" rx="8"/>
-        <path class="brand__mark-glyph" d="M8.5 20.5 14 7.5l5.5 13M10.6 16h6.8" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <img class="brand__mark logo-light" src="{{ url_for('static', filename='img/ancor-simbolo.png') }}" alt="">
+      <img class="brand__mark logo-dark" src="{{ url_for('static', filename='img/ancor-simbolo-claro.png') }}" alt="">
     {%- endmacro %}
     <a class="skip-link" href="#contenido">Saltar al contenido</a>
     <header class="site-header">
       <div class="container site-header__inner">
-        <a class="brand" href="{{ url_for('main.index') }}" aria-label="Atlas Portfolio Lab, inicio">
+        <a class="brand" href="{{ url_for('main.index') }}" aria-label="Ancor Capital, inicio">
           {{ brand_mark() }}
-          <span class="brand__name">Atlas</span>
-          <span class="brand__product">Portfolio Lab</span>
+          <span class="brand__name">Ancor</span>
+          <span class="brand__product">Capital</span>
         </a>
         <nav class="site-nav" aria-label="Navegación principal">
           {% for blueprint, endpoint, label in nav_items %}
@@ -162,7 +159,7 @@
     <footer class="site-footer">
       <div class="container">
         <div class="site-footer__inner">
-          <span class="site-footer__brand">{{ brand_mark() }} Atlas · Portfolio Lab</span>
+          <span class="site-footer__brand">{{ brand_mark() }} Ancor Capital · Inversión explicada</span>
           <div class="site-footer__meta">
             <span>Precios: Tiingo con respaldo de Yahoo Finance</span>
             <span>Modelos: skfolio · QuantStats</span>

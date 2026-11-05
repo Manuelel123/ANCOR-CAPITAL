@@ -21,9 +21,9 @@ criterio:
     - Acceso a más de 150 mercados.
 
 estado_referido:
-  sin_acuerdo: Hoy Atlas no tiene ningún acuerdo con Interactive Brokers.
-  con_acuerdo: Atlas tiene un acuerdo de referido con Interactive Brokers.
-aviso_comision: Atlas puede recibir una comisión si abres tu cuenta desde esta guía.
+  sin_acuerdo: Hoy Ancor Capital no tiene ningún acuerdo con Interactive Brokers.
+  con_acuerdo: Ancor Capital tiene un acuerdo de referido con Interactive Brokers.
+aviso_comision: Ancor Capital puede recibir una comisión si abres tu cuenta desde esta guía.
 
 alternativa: Si prefieres la Bolsa de Colombia, una alternativa es Trii.
 

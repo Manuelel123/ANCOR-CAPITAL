@@ -214,7 +214,7 @@ class GuideTests(OnboardingTestCase):
     LOW_NOTE = "no es el camino principal"
     LOW_EXAMPLE = "FIC600 de Banco Agrario"
     MEDIUM_NOTE = "es el camino para acciones y ETF"
-    COMMISSION = "Atlas puede recibir una comisión"
+    COMMISSION = "Ancor Capital puede recibir una comisión"
 
     def guide_for(self, capital, email="guia@example.com"):
         user_id = self.sign_in(email, profile=False, role_confirmed=True)

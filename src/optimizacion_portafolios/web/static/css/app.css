@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Atlas · Portfolio Lab — design system "Instrumento de precisión"
+   Ancor Capital — design system "Instrumento de precisión"
    Cool slate neutrals, a single electric-indigo accent; meaningful colour is
    reserved for data. Light by default, dark via [data-theme="dark"] or the
    OS preference. forms.css and charts.css consume the tokens defined here.
@@ -17,23 +17,23 @@
   --surface-1: #ffffff;
   --surface-2: #f1f3f6;
   --surface-3: #e8ebf0;
-  --surface-inverse: #0f172a;
+  --surface-inverse: #0b1f4b;
   --border: #e3e7ed;
   --border-strong: #cfd5de;
   --border-input: #8b95a7;
-  --text-1: #0f172a;
+  --text-1: #0b1f4b;
   --text-2: #475569;
   --text-3: #5f6b7e;
   --text-disabled: #9aa3b2;
   --text-on-accent: #ffffff;
 
   /* Accent */
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-active: #3730a3;
-  --accent-subtle: #eef2ff;
-  --accent-border: #c7d2fe;
-  --focus-ring: 0 0 0 3px rgba(79, 70, 229, .35);
+  --accent: #1f6fd6;
+  --accent-hover: #1a5cb4;
+  --accent-active: #0b1f4b;
+  --accent-subtle: #eaf2fd;
+  --accent-border: #bcd6f7;
+  --focus-ring: 0 0 0 3px rgba(47, 123, 217, .35);
 
   /* Status */
   --success: #047857; --success-bg: #ecfdf5; --success-border: #a7f3d0;
@@ -133,31 +133,31 @@
   --nav-h: 60px;
   --card-pad: 20px;
   --scrim: color-mix(in srgb, var(--bg) 70%, transparent);
-  --hero-glow: rgba(79, 70, 229, .08);
+  --hero-glow: rgba(47, 123, 217, .10);
 }
 
 /* Dark theme: explicit choice */
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0d12;
-  --surface-1: #12151c;
-  --surface-2: #181c25;
-  --surface-3: #212632;
+  --bg: #081226;
+  --surface-1: #0f1c36;
+  --surface-2: #15243f;
+  --surface-3: #1d2e4d;
   --surface-inverse: #e6e9ef;
-  --border: #232834;
-  --border-strong: #2f3542;
+  --border: #22324f;
+  --border-strong: #2f4163;
   --border-input: #5c6578;
   --text-1: #e6e9ef;
   --text-2: #a3abb9;
   --text-3: #8a93a3;
   --text-disabled: #5c6578;
-  --text-on-accent: #0b0d12;
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-active: #c7d2fe;
-  --accent-subtle: rgba(129, 140, 248, .14);
-  --accent-border: rgba(129, 140, 248, .4);
-  --focus-ring: 0 0 0 3px rgba(129, 140, 248, .45);
+  --text-on-accent: #081226;
+  --accent: #7ab0f5;
+  --accent-hover: #9cc4f8;
+  --accent-active: #bdd8fb;
+  --accent-subtle: rgba(122, 176, 245, .14);
+  --accent-border: rgba(122, 176, 245, .4);
+  --focus-ring: 0 0 0 3px rgba(122, 176, 245, .45);
   --success: #34d399; --success-bg: rgba(52, 211, 153, .12); --success-border: rgba(52, 211, 153, .35);
   --warning: #fbbf24; --warning-bg: rgba(251, 191, 36, .12); --warning-border: rgba(251, 191, 36, .35);
   --danger: #f87171;  --danger-bg: rgba(248, 113, 113, .12); --danger-border: rgba(248, 113, 113, .35);
@@ -182,32 +182,32 @@
   --shadow-xs: 0 0 0 transparent;
   --shadow-sm: 0 0 0 transparent;
   --shadow-lg: 0 16px 40px -12px rgba(0, 0, 0, .6);
-  --hero-glow: rgba(129, 140, 248, .10);
+  --hero-glow: rgba(122, 176, 245, .10);
 }
 
 /* Dark theme: OS preference when no explicit light choice (no-JS fallback) */
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
-    --bg: #0b0d12;
-    --surface-1: #12151c;
-    --surface-2: #181c25;
-    --surface-3: #212632;
+    --bg: #081226;
+    --surface-1: #0f1c36;
+    --surface-2: #15243f;
+    --surface-3: #1d2e4d;
     --surface-inverse: #e6e9ef;
-    --border: #232834;
-    --border-strong: #2f3542;
+    --border: #22324f;
+    --border-strong: #2f4163;
     --border-input: #5c6578;
     --text-1: #e6e9ef;
     --text-2: #a3abb9;
     --text-3: #8a93a3;
     --text-disabled: #5c6578;
-    --text-on-accent: #0b0d12;
-    --accent: #818cf8;
-    --accent-hover: #a5b4fc;
-    --accent-active: #c7d2fe;
-    --accent-subtle: rgba(129, 140, 248, .14);
-    --accent-border: rgba(129, 140, 248, .4);
-    --focus-ring: 0 0 0 3px rgba(129, 140, 248, .45);
+    --text-on-accent: #081226;
+    --accent: #7ab0f5;
+    --accent-hover: #9cc4f8;
+    --accent-active: #bdd8fb;
+    --accent-subtle: rgba(122, 176, 245, .14);
+    --accent-border: rgba(122, 176, 245, .4);
+    --focus-ring: 0 0 0 3px rgba(122, 176, 245, .45);
     --success: #34d399; --success-bg: rgba(52, 211, 153, .12); --success-border: rgba(52, 211, 153, .35);
     --warning: #fbbf24; --warning-bg: rgba(251, 191, 36, .12); --warning-border: rgba(251, 191, 36, .35);
     --danger: #f87171;  --danger-bg: rgba(248, 113, 113, .12); --danger-border: rgba(248, 113, 113, .35);
@@ -232,7 +232,7 @@
     --shadow-xs: 0 0 0 transparent;
     --shadow-sm: 0 0 0 transparent;
     --shadow-lg: 0 16px 40px -12px rgba(0, 0, 0, .6);
-    --hero-glow: rgba(129, 140, 248, .10);
+    --hero-glow: rgba(122, 176, 245, .10);
   }
 }
 
@@ -372,14 +372,20 @@ html.js .js-hidden { display: none !important; }
   border-radius: var(--r-sm);
 }
 .brand:hover { color: var(--text-1); }
-.brand__mark { width: 28px; height: 28px; flex: none; }
-.brand__mark-bg { fill: var(--accent); }
-.brand__mark-glyph { stroke: var(--text-on-accent); }
+.brand__mark { width: 28px; height: 28px; flex: none; object-fit: contain; }
+/* Each logo has a version for light and dark surfaces. */
+.logo-dark { display: none; }
+[data-theme="dark"] .logo-light { display: none; }
+[data-theme="dark"] .logo-dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .logo-light { display: none; }
+  :root:where(:not([data-theme="light"])) .logo-dark { display: block; }
+}
 .brand__name {
   font: 600 var(--fs-md) / 1 var(--font-display);
   letter-spacing: -0.01em;
 }
-.brand__product { color: var(--text-3); font-size: var(--fs-sm); font-weight: 500; line-height: 1; }
+.brand__product { color: var(--accent); font-size: var(--fs-sm); font-weight: 500; letter-spacing: .22em; line-height: 1; text-transform: uppercase; }
 
 .site-nav { display: flex; align-items: center; gap: 2px; height: 100%; }
 .site-nav__link {
@@ -1653,6 +1659,7 @@ input.badge:disabled { background: var(--accent-subtle); color: var(--accent); }
   pointer-events: none;
   background: radial-gradient(1200px 400px at 70% -10%, var(--hero-glow), transparent);
 }
+.hero__logo { width: 148px; height: auto; margin-bottom: var(--sp-6); }
 .hero__title {
   max-width: 16ch;
   font-size: var(--fs-hero);
@@ -1895,7 +1902,7 @@ input.badge:disabled { background: var(--accent-subtle); color: var(--accent); }
 @media (max-width: 767.98px) {
   .site-nav { display: none; }
   .mobile-menu { display: block; }
-  .brand__product { display: none; }
+  .brand__product { letter-spacing: .14em; }
   .page-shell { padding-top: var(--sp-6); }
   .page-header h1 { font-size: var(--fs-xl); }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2300,3 +2307,21 @@ input.badge:disabled { background: var(--accent-subtle); color: var(--accent); }
   text-align: center;
 }
 .auth-secondary-action { margin-top: var(--sp-3); text-align: center; }
+
+/* Cards that open on demand, and metric lists directly inside a card. */
+details.card > summary { cursor: pointer; list-style: none; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::after {
+  content: "";
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-left: auto;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg);
+  transition: transform .15s ease;
+}
+details.card[open] > summary::after { transform: rotate(-135deg); }
+details.card > summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.card > .metric-list { padding-inline: var(--sp-6); }

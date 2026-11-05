@@ -1,4 +1,4 @@
-# Avisos que el usuario acepta antes de usar Atlas (lo lee
+# Avisos que el usuario acepta antes de usar Ancor Capital (lo lee
 # optimizacion_portafolios.profiling.avisos).
 #
 # Si cambia el texto del aviso, sube `version`: se le vuelve a pedir la
@@ -15,7 +15,7 @@ pendiente_revision: true
 aviso_datos:
   titulo: Tratamiento de tus datos
   autorizacion: >-
-    Autorizo a Atlas a tratar mis datos personales y de perfil (correo,
+    Autorizo a Ancor Capital a tratar mis datos personales y de perfil (correo,
     respuestas del cuestionario, capital indicado y decisiones registradas) para:
   usos:
     - Armar mi perfil, mi plan y mi seguimiento.
@@ -26,5 +26,5 @@ aviso_datos:
   casilla: Leí el aviso y autorizo el tratamiento de mis datos.
 
 aviso_legal: >-
-  Atlas es educación financiera; las opciones que ves son ejemplos según tus
+  Ancor Capital es educación financiera; las opciones que ves son ejemplos según tus
   respuestas y la decisión es tuya.
