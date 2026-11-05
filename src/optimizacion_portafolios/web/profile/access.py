@@ -4,10 +4,11 @@
 
 - the access check ``require_current_profile`` (``web.auth.guard``): a
   signed-in user who has not accepted the current data notice is sent to it
-  (every role), one without a current profile to the questionnaire, and one
-  whose role is still unconfirmed (and is not ``gestor``) to the result page
-  to confirm it. The profiling pages (``profile.*``) are exempt from the last
-  two; sign-out, static files and the home page never reach the checks.
+  (every role), then to the introduction the first time (not the ``gestor``),
+  one without a current profile to the questionnaire, and one whose role is
+  still unconfirmed (and is not ``gestor``) to the result page to confirm it.
+  The profiling pages (``profile.*``) are exempt from the last two; sign-out,
+  static files and the home page never reach the checks.
 - an after-sign-in hook (``web.auth.session.register_after_login``) that loads
   the saved profile into ``session["perfil"]`` and, when the profile or the
   role is missing, redirects there instead of ``next``.
@@ -37,6 +38,7 @@ QUESTIONNAIRE_MESSAGE = "Antes de usar las herramientas, completa tu perfil de r
 ROLE_MESSAGE = "Confirma cómo quieres usar Atlas para continuar."
 DATA_NOTICE_ENDPOINT = "onboarding.data_notice"
 DATA_NOTICE_MESSAGE = "Antes de continuar, revisa y acepta el aviso de tratamiento de datos."
+INTRODUCTION_ENDPOINT = "onboarding.introduction"
 _EXTENSION_KEY = "questionnaire_path"
 _NOTICES_KEY = "avisos_path"
 
@@ -128,14 +130,24 @@ def needs_role_confirmation(user: User) -> bool:
     return user.role != GESTOR_ROLE and not user.role_confirmed
 
 
+def pending_onboarding_step(user: User) -> str | None:
+    """Data notice (everyone), then the introduction once (not the gestor)."""
+    if needs_data_notice(user):
+        return DATA_NOTICE_ENDPOINT
+    if user.intro_vista_at is None and user.role != GESTOR_ROLE:
+        return INTRODUCTION_ENDPOINT
+    return None
+
+
 def pending_profile_step(user: User) -> str | None:
     """Endpoint the user must visit before using the tools, if any.
 
-    The data notice is for everyone; the gestor uses the original app ("modo
-    original") after it: no questionnaire.
+    The gestor uses the original app ("modo original") after the data notice:
+    no questionnaire.
     """
-    if needs_data_notice(user):
-        return DATA_NOTICE_ENDPOINT
+    step = pending_onboarding_step(user)
+    if step is not None:
+        return step
     if user.role == GESTOR_ROLE:
         return None
     if session_profile(user) is None:
@@ -150,8 +162,10 @@ def require_current_profile(endpoint: str):
     if endpoint == DATA_NOTICE_ENDPOINT:
         return None
     step = pending_profile_step(current_user)
-    if step is None:
+    if step is None or (endpoint == INTRODUCTION_ENDPOINT and step != DATA_NOTICE_ENDPOINT):
         return None
+    if step == INTRODUCTION_ENDPOINT:
+        return redirect(url_for(step))
     if step != DATA_NOTICE_ENDPOINT and endpoint.startswith(PROFILE_ENDPOINT_PREFIX):
         return None
     message = {

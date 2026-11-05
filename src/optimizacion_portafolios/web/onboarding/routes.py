@@ -1,4 +1,9 @@
-"""Data notice (screen 0): one required checkbox, stored with the notice version."""
+"""Data notice (screen 0) and introduction.
+
+The notice has one required checkbox, stored with its version. The
+introduction opens by itself once, right after the notice, and stays in the
+user menu.
+"""
 
 from datetime import datetime, timezone
 
@@ -15,6 +20,16 @@ CHECKBOX_MESSAGE = "Para continuar, marca la casilla de autorización."
 def _next_step():
     step = pending_profile_step(current_user)
     return redirect(url_for(step or "main.index"))
+
+
+@bp.get("/introduccion")
+def introduction():
+    if current_user.intro_vista_at is None:
+        current_user.intro_vista_at = datetime.now(timezone.utc)
+        db.session.commit()
+    return render_template(
+        "onboarding/introduction.html", next_step=pending_profile_step(current_user) or "main.index"
+    )
 
 
 @bp.route("/aviso-datos", methods=["GET", "POST"])

@@ -18,9 +18,8 @@ from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE
 from optimizacion_portafolios.web.common.guided import glossary as glossary_items
 from optimizacion_portafolios.web.main import bp
 from optimizacion_portafolios.web.profile.access import (
-    DATA_NOTICE_ENDPOINT,
     current_profile,
-    needs_data_notice,
+    pending_onboarding_step,
     pending_profile_step,
 )
 
@@ -151,8 +150,9 @@ def index():
             password_rules=password_rules(),
         )
     # The home page is public, so the access checks do not run here.
-    if needs_data_notice(current_user):
-        return redirect(url_for(DATA_NOTICE_ENDPOINT))
+    onboarding_step = pending_onboarding_step(current_user)
+    if onboarding_step:
+        return redirect(url_for(onboarding_step))
     if current_user.role == GESTOR_ROLE:
         # The gestor uses the app exactly as before the educational layer.
         stats = (

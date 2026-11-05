@@ -15,6 +15,7 @@ from support import TEST_PASSWORD, add_test_profile, create_test_user, csrf_from
 
 DISCLAIMER = "Información educativa. No es recomendación de inversión ni asesoría financiera."
 NOTICE_PATH = "/aviso-datos"
+INTRO_PATH = "/introduccion"
 
 
 def path_of(response) -> str:
@@ -105,10 +106,53 @@ class DataNoticeTests(OnboardingTestCase):
         self.assertEqual(path_of(self.client.get("/hrp")), NOTICE_PATH)
 
     def test_an_existing_user_keeps_the_profile_after_accepting(self):
-        self.sign_in(notice=False)
+        self.sign_in(notice=False, intro=False)
         response = self.post(NOTICE_PATH, acepto="1")
-        self.assertNotEqual(path_of(response), "/perfil/cuestionario")
+        self.assertEqual(path_of(response), INTRO_PATH)
+        self.client.get(INTRO_PATH)
         self.assertEqual(self.client.get("/perfil/").status_code, 200)
+        self.assertEqual(self.client.get("/hrp").status_code, 200)
+
+
+class IntroductionTests(OnboardingTestCase):
+    def test_it_opens_by_itself_only_the_first_time(self):
+        self.sign_in(intro=False)
+        for path in ("/hrp", "/"):
+            self.assertEqual(path_of(self.client.get(path)), INTRO_PATH, path)
+        html = self.client.get(INTRO_PATH).get_data(as_text=True)
+        self.assertIn(DISCLAIMER, html)
+        self.assertEqual(self.client.get("/hrp").status_code, 200)
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_it_can_be_reopened_from_the_user_menu(self):
+        self.sign_in()
+        self.assertIn(f'href="{INTRO_PATH}"', self.client.get("/").get_data(as_text=True))
+        self.assertEqual(self.client.get(INTRO_PATH).status_code, 200)
+
+    def test_it_needs_the_data_notice_first(self):
+        self.sign_in(notice=False, intro=False)
+        self.assertEqual(path_of(self.client.get(INTRO_PATH)), NOTICE_PATH)
+
+    def test_a_new_user_goes_on_to_the_questionnaire(self):
+        self.sign_in(profile=False, notice=False, intro=False)
+        self.assertEqual(path_of(self.post(NOTICE_PATH, acepto="1")), INTRO_PATH)
+        html = self.client.get(INTRO_PATH).get_data(as_text=True)
+        self.assertIn('href="/perfil/cuestionario"', html)
+        self.assertEqual(self.client.get("/perfil/cuestionario").status_code, 200)
+
+    def test_it_explains_both_routes_with_the_first_question_options(self):
+        self.sign_in()
+        html = self.client.get(INTRO_PATH).get_data(as_text=True)
+        for text in ("Tu perfil", "Opciones explicadas", "Guía hasta tu primera inversión", "Seguimiento",
+                     "Ruta A", "Ruta B", "natillera"):
+            self.assertIn(text, html)
+
+    def test_the_gestor_does_not_get_it_automatically(self):
+        self.sign_in(role="gestor", role_confirmed=True, intro=False)
+        self.assertEqual(self.client.get("/hrp").status_code, 200)
+        self.assertEqual(self.client.get("/").status_code, 200)
+        html = self.client.get(INTRO_PATH).get_data(as_text=True)
+        self.assertIn(DISCLAIMER, html)
 
 
 class ProfileRulesTests(OnboardingTestCase):

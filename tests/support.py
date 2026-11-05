@@ -42,6 +42,7 @@ def create_test_user(
     profile: bool = True,
     verified: bool = True,
     notice: bool = True,
+    intro: bool = True,
 ) -> str:
     """Add a local user straight to the database; return ``str(user.id)``.
 
@@ -49,7 +50,8 @@ def create_test_user(
     (``TEST_PROFILE_ANSWERS``) and a confirmed role, so the tools are open.
     Pass ``profile=False`` for a brand-new user (no profile, unconfirmed role)
     ``verified=False`` for an account that has not proved its email yet and
-    ``notice=False`` for one that has not accepted the data notice.
+    ``notice=False`` for one that has not accepted the data notice and
+    ``intro=False`` for one that has not seen the introduction.
     """
     if role_confirmed is None:
         role_confirmed = profile
@@ -65,6 +67,8 @@ def create_test_user(
             if notice:
                 user.datos_aceptados_at = datetime.now(timezone.utc)
                 user.datos_aviso_version = load_notices().version
+            if intro:
+                user.intro_vista_at = datetime.now(timezone.utc)
             db.session.commit()
         if profile and get_current_profile(user.id) is None:
             add_test_profile(app, user.id)
