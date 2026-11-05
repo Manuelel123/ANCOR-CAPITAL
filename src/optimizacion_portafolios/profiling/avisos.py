@@ -29,7 +29,6 @@ class DataNotice:
     title: str
     authorization: str
     uses: tuple[str, ...]
-    rights: str
     checkbox: str
     legal_notice: str
 
@@ -61,7 +60,6 @@ def parse_notices(data, source: str = "avisos") -> DataNotice:
         title=_text(source, notice.get("titulo"), "aviso_datos.titulo"),
         authorization=_text(source, notice.get("autorizacion"), "aviso_datos.autorizacion"),
         uses=tuple(_text(source, use, "aviso_datos.usos") for use in uses),
-        rights=_text(source, notice.get("derechos"), "aviso_datos.derechos"),
         checkbox=_text(source, notice.get("casilla"), "aviso_datos.casilla"),
         legal_notice=_text(source, data.get("aviso_legal"), "aviso_legal"),
     )

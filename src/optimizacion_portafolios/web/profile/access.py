@@ -3,10 +3,10 @@
 ``init_app`` wires three things:
 
 - the access check ``require_current_profile`` (``web.auth.guard``): a
-  signed-in user who has not accepted the current data notice is sent to it
-  (every role), then to the introduction the first time (not the ``gestor``),
-  one without a current profile to the questionnaire, and one whose role is
-  still unconfirmed (and is not ``gestor``) to the result page to confirm it.
+  signed-in user who has not accepted the current data notice is sent to it,
+  then to the introduction the first time, one without a current profile to
+  the questionnaire, and one whose role is still unconfirmed to the result
+  page to confirm it. The ``gestor`` uses the original app: none of them.
   The profiling pages (``profile.*``) and the broker guide, linked from the
   result page, are exempt from the last two; sign-out, static files and the
   home page never reach the checks.
@@ -56,7 +56,9 @@ def get_data_notice() -> DataNotice:
 
 
 def needs_data_notice(user: User) -> bool:
-    """True until ``user`` accepts the current version of the notice."""
+    """True until ``user`` accepts the current version (the gestor never sees it)."""
+    if user.role == GESTOR_ROLE:
+        return False
     return user.datos_aceptados_at is None or user.datos_aviso_version != get_data_notice().version
 
 
@@ -133,7 +135,7 @@ def needs_role_confirmation(user: User) -> bool:
 
 
 def pending_onboarding_step(user: User) -> str | None:
-    """Data notice (everyone), then the introduction once (not the gestor)."""
+    """Data notice, then the introduction once (neither for the gestor)."""
     if needs_data_notice(user):
         return DATA_NOTICE_ENDPOINT
     if user.intro_vista_at is None and user.role != GESTOR_ROLE:
@@ -144,8 +146,7 @@ def pending_onboarding_step(user: User) -> str | None:
 def pending_profile_step(user: User) -> str | None:
     """Endpoint the user must visit before using the tools, if any.
 
-    The gestor uses the original app ("modo original") after the data notice:
-    no questionnaire.
+    The gestor uses the original app ("modo original"): no questionnaire.
     """
     step = pending_onboarding_step(user)
     if step is not None:

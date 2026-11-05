@@ -25,7 +25,6 @@
         <ol>
           {% for use in notice.uses %}<li>{{ use }}</li>{% endfor %}
         </ol>
-        <p>{{ notice.rights }}</p>
         <label class="inline-check"><input type="checkbox" name="acepto" value="1" required> <span>{{ notice.checkbox }}</span></label>
       </div>
       <div class="card__footer"><button class="button button-primary" type="submit">Aceptar y continuar</button></div>

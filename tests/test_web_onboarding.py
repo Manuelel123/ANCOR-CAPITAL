@@ -54,9 +54,10 @@ class DataNoticeTests(OnboardingTestCase):
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual(path_of(response), NOTICE_PATH)
 
-    def test_the_gestor_also_gets_the_notice(self):
-        self.sign_in(notice=False, role="gestor", role_confirmed=True)
-        self.assertEqual(path_of(self.client.get("/hrp")), NOTICE_PATH)
+    def test_the_gestor_does_not_get_the_notice(self):
+        self.sign_in(notice=False, intro=False, role="gestor", role_confirmed=True)
+        self.assertEqual(self.client.get("/hrp").status_code, 200)
+        self.assertEqual(self.client.get("/").status_code, 200)
 
     def test_public_pages_stay_open_without_a_session(self):
         for path in ("/", "/auth/ingresar", "/auth/registro"):
