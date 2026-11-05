@@ -94,6 +94,16 @@ def detail(portfolio_id: int):
     return render_template("portfolios/detail.html", portfolio=services.portfolio_detail(portfolio))
 
 
+@bp.get("/gestor/<int:portfolio_id>")
+@login_required
+def shared(portfolio_id: int):
+    """Live panel of a gestor's portfolio for the other users: they can only look."""
+    portfolio = repositories.visible_gestor_portfolio(portfolio_id)
+    if portfolio is None:
+        abort(404)
+    return render_template("portfolios/detail.html", portfolio=services.portfolio_detail(portfolio), shared=True)
+
+
 @bp.route("/<int:portfolio_id>/alertas", methods=["GET", "POST"])
 @login_required
 def alerts(portfolio_id: int):

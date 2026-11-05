@@ -195,6 +195,11 @@ def visible_gestor_portfolios() -> list[Portfolio]:
     return list(db.session.scalars(query.order_by(Portfolio.name)))
 
 
+def visible_gestor_portfolio(portfolio_id: int) -> Portfolio | None:
+    """The portfolio if a gestor shows it to the other users."""
+    return next((p for p in visible_gestor_portfolios() if p.id == portfolio_id), None)
+
+
 def save_snapshots(portfolio: Portfolio, rows: list[dict], refresh_day: date | None = None) -> int:
     """Insert the snapshots of new days; only ``refresh_day`` may be overwritten.
 

@@ -5,6 +5,7 @@ from datetime import date
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
+import pandas as pd
 from sqlalchemy import func, select
 
 from optimizacion_portafolios.storage import db, repositories
@@ -149,6 +150,11 @@ class ThrottleTests(unittest.TestCase):
         self.assertEqual(throttle.retry_after("email:a"), 0)
 
 
+def _rising_prices(tickers, start, end):
+    index = pd.bdate_range(start, end)
+    return pd.DataFrame({ticker: [100.0 + day for day in range(len(index))] for ticker in tickers}, index=index)
+
+
 class GestorPortfolioAdministrationTests(unittest.TestCase):
     def setUp(self):
         self.app = create_app({"TESTING": True, "SECRET_KEY": "test-secret"})
@@ -238,9 +244,58 @@ class GestorPortfolioAdministrationTests(unittest.TestCase):
         self.assertIn("5.00 %", html)
         self.assertIn("2026-11-02", html)
         self.assertIn("AAPL 100.0 %", html)
-        self.assertNotIn("100,000", html)
-        self.assertNotIn(f"/portafolios/{self.portfolio_id}", html)
+        self.assertIn(f"/portafolios/gestor/{self.portfolio_id}", html)
         self.assertEqual(novato.get(f"/portafolios/{self.portfolio_id}").status_code, 404)
+
+    def test_the_card_shows_the_latest_valuation(self):
+        with self.app.app_context():
+            portfolio = repositories.get_portfolio(self.gestor_id, self.portfolio_id)
+            repositories.save_snapshots(portfolio, [
+                {"day": date(2026, 10, 19), "value": 90000.0, "benchmark_value": 95000.0,
+                 "weights": {"AAPL": 1.0}, "metrics": None},
+                {"day": date(2026, 11, 4), "value": 120000.0, "benchmark_value": 101000.0,
+                 "weights": {"AAPL": 1.0}, "metrics": None},
+            ])
+            repositories.set_portfolio_visibility(portfolio, True)
+        html = self.client_for(self.novato_id).get("/").data.decode()
+        self.assertIn("2026-11-04", html)
+        self.assertIn("20.00 %", html)
+        self.assertNotIn("2026-10-19", html)
+
+    @patch("optimizacion_portafolios.web.portfolios.services.download_prices", side_effect=_rising_prices)
+    def test_users_see_the_live_panel_and_can_only_look(self, _download):
+        with self.app.app_context():
+            repositories.set_portfolio_visibility(
+                repositories.get_portfolio(self.gestor_id, self.portfolio_id), True
+            )
+        path = f"/portafolios/gestor/{self.portfolio_id}"
+        response = self.client_for(self.novato_id).get(path)
+        html = response.data.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Portafolio 1", html)
+        self.assertIn("Portafolio del gestor", html)
+        self.assertIn("Solo puedes verlo", html)
+        self.assertIn("AAPL", html)
+        self.assertNotIn("No se pudo valorar", html)
+        for link in ("/alertas", "/gestionar", "/versiones", "/senales"):
+            self.assertNotIn(f'/portafolios/{self.portfolio_id}{link}', html, link)
+        self.assertNotIn("portfolio-tabs", html)
+
+    def test_a_hidden_portfolio_has_no_panel(self):
+        self.assertEqual(self.client_for(self.novato_id).get(f"/portafolios/gestor/{self.portfolio_id}").status_code, 404)
+
+    def test_a_liquidated_portfolio_has_no_panel(self):
+        gestor = self.client_for(self.gestor_id)
+        self.post(gestor, f"/portafolios/{self.portfolio_id}/visibilidad", visible="1")
+        self.post(gestor, f"/portafolios/{self.portfolio_id}/archivar")
+        self.assertEqual(self.client_for(self.novato_id).get(f"/portafolios/gestor/{self.portfolio_id}").status_code, 404)
+
+    def test_a_portfolio_of_a_user_cannot_be_opened_as_shared(self):
+        with self.app.app_context():
+            portfolio = self._portfolio("Privado", self.novato_id)
+            repositories.set_portfolio_visibility(portfolio, True)
+            portfolio_id = portfolio.id
+        self.assertEqual(self.client_for(self.gestor_id).get(f"/portafolios/gestor/{portfolio_id}").status_code, 404)
 
     def test_a_liquidated_portfolio_stops_showing(self):
         gestor = self.client_for(self.gestor_id)

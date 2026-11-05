@@ -179,18 +179,20 @@ def portfolio_header(portfolio: Portfolio) -> dict:
 
 
 def public_summary(portfolio: Portfolio) -> dict:
-    """What the other users see of a gestor's portfolio: weights and returns, no money.
+    """Card of a gestor's portfolio on the home page; its panel has the rest.
 
     Uses the last stored valuation, so the home page never downloads prices.
     """
     version = portfolio.current_version
-    last = portfolio.snapshots.order_by(DailySnapshot.day.desc()).first()
+    # order_by(None): the relationship already sorts by day, oldest first.
+    last = portfolio.snapshots.order_by(None).order_by(DailySnapshot.day.desc()).first()
     holdings = sorted(version.holdings, key=lambda holding: -holding.target_weight) if version else []
 
     def total_return(value):
         return None if value is None else value / portfolio.initial_capital - 1
 
     return {
+        "id": portfolio.id,
         "name": portfolio.name,
         "benchmark": _BENCHMARK_LABELS.get(portfolio.benchmark, portfolio.benchmark),
         "tracking_start": portfolio.tracking_start.isoformat(),

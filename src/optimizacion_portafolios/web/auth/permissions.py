@@ -70,6 +70,7 @@ ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "portfolios.confirm": INVESTORS,
     "portfolios.archive": INVESTORS,
     "portfolios.signals": MANAGERS,
+    "portfolios.shared": EVERYONE,
     "portfolios.rename": MANAGERS,
     "portfolios.visibility": MANAGERS,
     "portfolios.delete": MANAGERS,
