@@ -306,7 +306,9 @@ def _assemble_prices(
     window = (prices.index >= pd.Timestamp(start)) & (
         prices.index <= pd.Timestamp(end)
     )
-    return prices.loc[window].sort_index().rename_axis(index="Fecha")
+    # Yahoo can list a day with volume but no close yet: forward-filling such a
+    # row would show that date with the previous day's prices.
+    return prices.loc[window].dropna(how="all").sort_index().rename_axis(index="Fecha")
 
 
 def fetch_fundamental_information(ticker: str) -> dict:

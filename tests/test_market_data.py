@@ -340,6 +340,20 @@ class MarketDataTests(unittest.TestCase):
         self.assertEqual(client.return_value.get_ticker_price.call_count, 2)
         self.assertCountEqual(download.call_args.args[0], ["MSFT", "NVDA", "BTC-USD"])
 
+    @_without_tiingo_key()
+    @patch(_YF_DOWNLOAD)
+    def test_days_without_any_close_are_dropped(self, download):
+        download.return_value = _yahoo_close(
+            pd.DatetimeIndex(["2025-01-02", "2025-01-03", "2025-01-06"]),
+            {"AAPL": [1.0, 2.0, np.nan], "MSFT": [3.0, np.nan, np.nan]},
+        )
+
+        result = download_prices(("AAPL", "MSFT"), date(2025, 1, 2), date(2025, 1, 6))
+
+        self.assertEqual(list(result.index), list(pd.DatetimeIndex(["2025-01-02", "2025-01-03"])))
+        self.assertEqual(result.loc["2025-01-03", "AAPL"], 2.0)
+        self.assertTrue(np.isnan(result.loc["2025-01-03", "MSFT"]))
+
     @patch.object(TiingoClient, "_request")
     def test_tiingo_client_requests_use_timeout(self, request):
         tiingo_prices._client("test-key").get_ticker_price("AAPL")
