@@ -1,6 +1,6 @@
 """Portada (signed out), main screen (signed in) and glossary."""
 
-from flask import render_template
+from flask import redirect, render_template, url_for
 from flask_login import current_user
 
 from optimizacion_portafolios.data.catalogs import (
@@ -17,7 +17,12 @@ from optimizacion_portafolios.web.auth.passwords import password_rules
 from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE
 from optimizacion_portafolios.web.common.guided import glossary as glossary_items
 from optimizacion_portafolios.web.main import bp
-from optimizacion_portafolios.web.profile.access import current_profile, pending_profile_step
+from optimizacion_portafolios.web.profile.access import (
+    DATA_NOTICE_ENDPOINT,
+    current_profile,
+    needs_data_notice,
+    pending_profile_step,
+)
 
 MODEL_COUNT = 2
 DATA_SOURCE_COUNT = 2
@@ -145,6 +150,9 @@ def index():
             roles=ROLES_OVERVIEW,
             password_rules=password_rules(),
         )
+    # The home page is public, so the access checks do not run here.
+    if needs_data_notice(current_user):
+        return redirect(url_for(DATA_NOTICE_ENDPOINT))
     if current_user.role == GESTOR_ROLE:
         # The gestor uses the app exactly as before the educational layer.
         stats = (
@@ -153,8 +161,7 @@ def index():
             {"value": DATA_SOURCE_COUNT, "label": "fuentes de datos de mercado"},
         )
         return render_template("main/original_index.html", modules=GESTOR_MODULES, stats=stats)
-    # The home page is public, so the access checks do not run here: a user
-    # without a profile (or role) sees the pending step instead of the tools.
+    # A user without a profile (or role) sees the pending step instead of the tools.
     step = pending_profile_step(current_user)
     tools = [] if step else [tool for tool in TOOLS if can_open(tool["endpoint"])]
     return render_template(

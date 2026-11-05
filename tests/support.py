@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from optimizacion_portafolios.profiling import evaluate, load_questionnaire
+from optimizacion_portafolios.profiling.avisos import load_notices
 from optimizacion_portafolios.storage import db
 from optimizacion_portafolios.storage.profiles import get_current_profile, save_profile
 from optimizacion_portafolios.storage.users import create_user, get_user_by_email
@@ -40,13 +41,15 @@ def create_test_user(
     display_name: str | None = "Ana",
     profile: bool = True,
     verified: bool = True,
+    notice: bool = True,
 ) -> str:
     """Add a local user straight to the database; return ``str(user.id)``.
 
     By default the user has already been profiled: a current risk profile
     (``TEST_PROFILE_ANSWERS``) and a confirmed role, so the tools are open.
     Pass ``profile=False`` for a brand-new user (no profile, unconfirmed role)
-    and ``verified=False`` for an account that has not proved its email yet.
+    ``verified=False`` for an account that has not proved its email yet and
+    ``notice=False`` for one that has not accepted the data notice.
     """
     if role_confirmed is None:
         role_confirmed = profile
@@ -59,7 +62,10 @@ def create_test_user(
             )
             if verified:
                 user.email_verified_at = datetime.now(timezone.utc)
-                db.session.commit()
+            if notice:
+                user.datos_aceptados_at = datetime.now(timezone.utc)
+                user.datos_aviso_version = load_notices().version
+            db.session.commit()
         if profile and get_current_profile(user.id) is None:
             add_test_profile(app, user.id)
         return str(user.id)

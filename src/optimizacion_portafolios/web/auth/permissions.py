@@ -46,6 +46,7 @@ ROLE_SUMMARIES = {
 ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "main.index": EVERYONE,
     "main.glossary": EVERYONE,
+    "onboarding.data_notice": EVERYONE,
     "decisions.history": EVERYONE,
     "hrp.hrp": EVERYONE,
     "black_litterman.black_litterman": EVERYONE,

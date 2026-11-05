@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from flask import request
 from flask_migrate import downgrade, upgrade
+from sqlalchemy import text
 
 from optimizacion_portafolios.storage import MIGRATIONS_DIRECTORY, db
 from optimizacion_portafolios.storage.models import (
@@ -99,8 +100,15 @@ class GestorPortfolioMigrationTests(unittest.TestCase):
             with app.app_context():
                 db.drop_all()
                 upgrade(directory=MIGRATIONS_DIRECTORY, revision=self.PREVIOUS)
+                # Plain SQL: the model may already have columns of later migrations.
                 for index, role in enumerate(roles):
-                    db.session.add(User(email=f"{index}@test.local", password_hash="x", role=role))
+                    db.session.execute(
+                        text(
+                            "INSERT INTO users (email, password_hash, role, role_confirmed, plan, created_at)"
+                            " VALUES (:email, 'x', :role, false, 'free', CURRENT_TIMESTAMP)"
+                        ),
+                        {"email": f"{index}@test.local", "role": role},
+                    )
                 db.session.commit()
                 upgrade(directory=MIGRATIONS_DIRECTORY)
                 result = self._summary()

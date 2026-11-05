@@ -255,6 +255,7 @@ def _register_blueprints(app: Flask) -> None:
     from optimizacion_portafolios.web.hrp import bp as hrp_bp
     from optimizacion_portafolios.web.main import bp as main_bp
     from optimizacion_portafolios.web.monitoring import bp as monitoring_bp
+    from optimizacion_portafolios.web.onboarding import bp as onboarding_bp
     from optimizacion_portafolios.web.profile import bp as profile_bp
 
     app.register_blueprint(main_bp)
@@ -268,6 +269,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(account_bp)
     app.register_blueprint(portfolios_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(onboarding_bp)
 
 
 def _register_csrf_protection(app: Flask) -> None:

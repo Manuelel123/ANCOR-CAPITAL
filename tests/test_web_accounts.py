@@ -64,7 +64,8 @@ class AccountTestCase(unittest.TestCase):
         with self.client.session_transaction() as session:
             signed_in = "_user_id" in session
         # Signed in, the page header carries the sign-out form; anonymous, the sign-in form does.
-        self.csrf_token = csrf_from(self.client.get("/" if signed_in else "/auth/ingresar"))
+        path = "/" if signed_in else "/auth/ingresar"
+        self.csrf_token = csrf_from(self.client.get(path, follow_redirects=True))
 
     def sign_in(self, email="ana@example.com", password=TEST_PASSWORD):
         self.create_user(email, password)
@@ -96,8 +97,8 @@ class RegistrationTests(AccountTestCase):
         code = self.last_code("nueva@example.com")
         response = self.post("/auth/verificar", code=code)
         self.refresh_csrf()
-        # A new account has no risk profile yet: straight to the questionnaire.
-        self.assertEqual(urlsplit(response.location).path, "/perfil/cuestionario")
+        # A new account starts with the data notice.
+        self.assertEqual(urlsplit(response.location).path, "/aviso-datos")
         user = self.user("nueva@example.com")
         self.assertEqual(user.email, "nueva@example.com")
         self.assertEqual(user.display_name, "Nueva")
@@ -106,7 +107,7 @@ class RegistrationTests(AccountTestCase):
         self.assertIsNotNone(user.last_login_at)
         with self.client.session_transaction() as session:
             self.assertEqual(session["_user_id"], str(user.id))
-        html = self.client.get("/").data.decode()
+        html = self.client.get("/aviso-datos").data.decode()
         self.assertIn("Cerrar sesión", html)
 
     def test_password_is_stored_as_argon2_hash(self):
