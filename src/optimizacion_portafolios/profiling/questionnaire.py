@@ -19,12 +19,15 @@ import yaml
 # <repo>/config/cuestionario.yaml (this file is <repo>/src/optimizacion_portafolios/profiling/).
 DEFAULT_PATH = Path(__file__).resolve().parents[3] / "config" / "cuestionario.yaml"
 PATH_ENV_VAR = "ATLAS_QUESTIONNAIRE_PATH"
-OPTIONS_PER_QUESTION = 4
+MIN_OPTIONS = 2
 # Roles the questionnaire may suggest ("gestor" is never suggested nor chosen).
 SUGGESTABLE_ROLES = ("novato", "inversionista")
 VETO_FACTOR = "veto"
 HORIZON_FACTOR = "horizonte"
-PRIOR_STEP = "datos_previos"
+SCORE_FACTOR = "tolerancia"
+CAPITAL_FIELD = "capital_rango"
+HORIZON_FIELD = "horizonte"
+PRIOR_FIELDS = (CAPITAL_FIELD, HORIZON_FIELD)
 
 
 class QuestionnaireError(ValueError):
@@ -45,13 +48,14 @@ class Choice:
     id: str
     text: str
     max_level: str | None = None  # horizon cap; None = no cap
+    capital_level: str | None = None  # bajo, medio o alto (capital only)
 
 
 @dataclass(frozen=True)
 class Question:
     id: str
     text: str
-    options: tuple[str, ...]  # option n (1-based) is worth n points
+    options: tuple[str, ...]  # answers are 1-based positions
     correct: int | None = None
 
 
@@ -60,8 +64,9 @@ class Block:
     id: str
     title: str
     description: str
-    affects_profile: bool
     questions: tuple[Question, ...]
+    # Fields of the step in display order: question ids, capital and horizon.
+    layout: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -76,7 +81,7 @@ class Veto:
 class RoleRule:
     experience_question: str
     min_experience: int  # 1-based position; this option or a later one
-    control_question: str
+    control_question: str | None  # optional knowledge check
     if_met: str
     otherwise: str
 
@@ -85,7 +90,9 @@ class RoleRule:
 class Questionnaire:
     version: str
     levels: tuple[Level, ...]
-    thresholds: tuple[tuple[str, Fraction], ...]  # (level id, minimum average), ascending
+    thresholds: tuple[tuple[str, Fraction], ...]  # (level id, minimum score), ascending
+    score_fields: tuple[str, ...]  # what adds up to the score (horizon or question ids)
+    capacity_question: str
     capital_text: str
     capital_options: tuple[Choice, ...]
     horizon_text: str
@@ -96,6 +103,10 @@ class Questionnaire:
     factor_labels: dict
     explanations: dict
     role_rule: RoleRule
+    capital_levels: tuple[str, ...] = ()
+    # Choices of earlier versions, for the saved profiles that still use them.
+    legacy_capital: tuple[Choice, ...] = ()
+    legacy_horizon: tuple[Choice, ...] = ()
     source: str = ""
 
     # Lookups -----------------------------------------------------------------
@@ -126,8 +137,11 @@ class Questionnaire:
         raise KeyError(block_id)
 
     @property
-    def scored_blocks(self) -> tuple[Block, ...]:
-        return tuple(block for block in self.blocks if block.affects_profile)
+    def max_score(self) -> int:
+        return sum(
+            len(self.horizon_options if field == HORIZON_FACTOR else self.question(field).options) - 1
+            for field in self.score_fields
+        )
 
     @property
     def question_ids(self) -> tuple[str, ...]:
@@ -139,10 +153,21 @@ class Questionnaire:
     def horizon(self, choice_id: str) -> Choice:
         return _find_choice(self.horizon_options, choice_id)
 
+    def capital_text_of(self, choice_id: str) -> str:
+        """Label of a capital range, also from earlier versions of the questionnaire."""
+        return _find_choice((*self.capital_options, *self.legacy_capital), choice_id).text
+
+    def horizon_text_of(self, choice_id: str) -> str:
+        return _find_choice((*self.horizon_options, *self.legacy_horizon), choice_id).text
+
+    def capital_level(self, choice_id: str) -> str:
+        """``bajo``, ``medio`` or ``alto``: which instruments to show, never a limit."""
+        return _find_choice((*self.capital_options, *self.legacy_capital), choice_id).capital_level
+
     @property
     def steps(self) -> tuple[str, ...]:
-        """Wizard steps: the prior data, then one step per block."""
-        return (PRIOR_STEP, *(block.id for block in self.blocks))
+        """Wizard steps: one per block."""
+        return tuple(block.id for block in self.blocks)
 
 
 def _find_choice(choices: tuple[Choice, ...], choice_id: str) -> Choice:
@@ -213,23 +238,30 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
         _fail(source, f"«umbrales» debe tener exactamente los niveles {', '.join(level_ids[1:])} "
                       f"(el primero, {level_ids[0]}, no lleva umbral).")
     thresholds = []
-    previous = Fraction(1)
+    previous = Fraction(0)
     for level_id in level_ids[1:]:
         value = raw_thresholds[level_id]
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             _fail(source, f"el umbral de {level_id} debe ser un número.")
         value = Fraction(str(value))
-        if not previous < value <= OPTIONS_PER_QUESTION:
-            _fail(source, f"los umbrales deben crecer entre 1 y {OPTIONS_PER_QUESTION} (revise {level_id}).")
+        if not previous < value:
+            _fail(source, f"los umbrales deben crecer (revise {level_id}).")
         thresholds.append((level_id, value))
         previous = value
 
     prior = _mapping(source, data.get("datos_previos"), "datos_previos")
     capital = _mapping(source, prior.get("capital"), "datos_previos.capital")
     horizon = _mapping(source, prior.get("horizonte"), "datos_previos.horizonte")
+    capital_levels = tuple(_sequence(source, data.get("niveles_capital"), "niveles_capital"))
+
+    def capital_choice(choice_id, raw, where) -> Choice:
+        level = raw.get("nivel")
+        if level not in capital_levels:
+            _fail(source, f"{where}: «{choice_id}» necesita un «nivel» de {', '.join(capital_levels)}.")
+        return Choice(choice_id, _text(source, raw.get("texto"), where), capital_level=level)
+
     capital_options = tuple(
-        Choice(_identifier(source, item.get("id"), "una opción de capital"),
-               _text(source, item.get("texto"), "una opción de capital"))
+        capital_choice(_identifier(source, item.get("id"), "una opción de capital"), item, "datos_previos.capital")
         for item in (_mapping(source, raw, "datos_previos.capital.opciones")
                      for raw in _sequence(source, capital.get("opciones"), "datos_previos.capital.opciones"))
     )
@@ -250,36 +282,56 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
     for raw in _sequence(source, data.get("bloques"), "bloques"):
         raw = _mapping(source, raw, "bloques")
         block_id = _identifier(source, raw.get("id"), "un bloque")
-        if block_id in (PRIOR_STEP, VETO_FACTOR, HORIZON_FACTOR):
+        if block_id in (VETO_FACTOR, HORIZON_FACTOR):
             _fail(source, f"«{block_id}» es un nombre reservado; use otro id de bloque.")
-        affects = raw.get("afecta_perfil")
-        if not isinstance(affects, bool):
-            _fail(source, f"el bloque «{block_id}» necesita «afecta_perfil: true|false».")
         questions = []
+        layout = []
         for raw_question in _sequence(source, raw.get("preguntas"), f"bloque {block_id}.preguntas"):
             raw_question = _mapping(source, raw_question, f"bloque {block_id}.preguntas")
+            if "campo" in raw_question:
+                # Capital and horizon keep their own columns; here only their place.
+                if raw_question["campo"] not in PRIOR_FIELDS:
+                    _fail(source, f"«campo» debe ser uno de: {', '.join(PRIOR_FIELDS)}.")
+                layout.append(raw_question["campo"])
+                continue
             question_id = _identifier(source, raw_question.get("id"), f"una pregunta del bloque {block_id}")
             options = _sequence(source, raw_question.get("opciones"), f"opciones de {question_id}")
-            if len(options) != OPTIONS_PER_QUESTION:
-                _fail(source, f"la pregunta «{question_id}» debe tener exactamente {OPTIONS_PER_QUESTION} opciones (valen 1 a 4).")
+            if len(options) < MIN_OPTIONS:
+                _fail(source, f"la pregunta «{question_id}» debe tener al menos {MIN_OPTIONS} opciones (tiene {len(options)}).")
             options = tuple(_text(source, option, f"una opción de {question_id}") for option in options)
             _unique(source, list(options), f"las opciones de {question_id}")
             correct = raw_question.get("correcta")
             if correct is not None and (
-                isinstance(correct, bool) or not isinstance(correct, int) or not 1 <= correct <= OPTIONS_PER_QUESTION
+                isinstance(correct, bool) or not isinstance(correct, int) or not 1 <= correct <= len(options)
             ):
-                _fail(source, f"«correcta» de «{question_id}» debe ser un número de 1 a {OPTIONS_PER_QUESTION}.")
+                _fail(source, f"«correcta» de «{question_id}» debe ser un número de 1 a {len(options)}.")
             questions.append(Question(question_id, _text(source, raw_question.get("texto"), question_id), options, correct))
+            layout.append(question_id)
         blocks.append(Block(block_id, _text(source, raw.get("titulo"), f"el bloque {block_id}"),
-                            str(raw.get("descripcion") or "").strip(), affects, tuple(questions)))
+                            str(raw.get("descripcion") or "").strip(), tuple(questions), tuple(layout)))
     _unique(source, [block.id for block in blocks], "bloques")
     question_ids = [question.id for block in blocks for question in block.questions]
     _unique(source, question_ids, "las preguntas")
-    scored = [block.id for block in blocks if block.affects_profile]
-    if not scored:
-        _fail(source, "al menos un bloque debe tener «afecta_perfil: true».")
+    placed = [field for block in blocks for field in block.layout if field in PRIOR_FIELDS]
+    if sorted(placed) != sorted(PRIOR_FIELDS):
+        _fail(source, f"los bloques deben ubicar una vez cada uno de: {', '.join(PRIOR_FIELDS)}.")
     questions_by_id = {question.id: question for block in blocks for question in block.questions}
-    block_of = {question.id: block for block in blocks for question in block.questions}
+
+    scoring = _mapping(source, data.get("puntaje"), "puntaje")
+    score_fields = tuple(_sequence(source, scoring.get("preguntas"), "puntaje.preguntas"))
+    max_score = 0
+    for field in score_fields:
+        if field == HORIZON_FACTOR:
+            max_score += len(horizon_options) - 1
+        elif field in questions_by_id:
+            max_score += len(questions_by_id[field].options) - 1
+        else:
+            _fail(source, f"puntaje.preguntas: «{field}» no es el horizonte ni una pregunta.")
+    if thresholds and thresholds[-1][1] > max_score:
+        _fail(source, f"los umbrales no pueden pasar del puntaje máximo ({max_score}).")
+    capacity_question = scoring.get("capacidad")
+    if capacity_question not in questions_by_id:
+        _fail(source, f"puntaje.capacidad: la pregunta «{capacity_question}» no existe.")
 
     def option_position(question_id, option_text, where) -> int:
         if question_id not in questions_by_id:
@@ -295,24 +347,22 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
         raw = _mapping(source, raw, "vetos")
         question_id = raw.get("pregunta")
         position = option_position(question_id, raw.get("opcion"), "vetos")
-        if not block_of[question_id].affects_profile:
-            _fail(source, f"vetos: «{question_id}» está en un bloque que no afecta el perfil.")
         vetoes.append(Veto(question_id, position, questions_by_id[question_id].options[position - 1],
                            _text(source, raw.get("explicacion"), f"el veto de {question_id}")))
 
     factors = _mapping(source, data.get("factor_limitante"), "factor_limitante")
     tiebreak = tuple(_sequence(source, factors.get("desempate"), "factor_limitante.desempate"))
-    expected = {VETO_FACTOR, HORIZON_FACTOR, *scored}
+    expected = {VETO_FACTOR, HORIZON_FACTOR, SCORE_FACTOR}
     if set(tiebreak) != expected or len(tiebreak) != len(expected):
         _fail(source, "factor_limitante.desempate debe listar una vez cada uno de: "
                       + ", ".join(sorted(expected)) + ".")
     labels = _mapping(source, factors.get("etiquetas"), "factor_limitante.etiquetas")
     explanations = _mapping(source, factors.get("explicaciones"), "factor_limitante.explicaciones")
-    factor_labels = {factor: _text(source, labels.get(factor), f"la etiqueta del factor {factor}") for factor in tiebreak}
+    factor_labels = {factor: _text(source, label, f"la etiqueta del factor {factor}") for factor, label in labels.items()}
+    for factor in tiebreak:
+        _text(source, labels.get(factor), f"la etiqueta del factor {factor}")
     templates = {}
-    sample = {"perfil": "x", "horizonte": "x"}
-    for block_id in scored:
-        sample[f"puntaje_{block_id}"] = sample[f"nivel_{block_id}"] = "x"
+    sample = {"perfil": "x", "horizonte": "x", "puntaje": "x", "puntaje_maximo": "x"}
     for factor in tiebreak:
         if factor == VETO_FACTOR:
             continue  # each veto carries its own explanation
@@ -327,17 +377,29 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
     experience = rule.get("experiencia")
     min_experience = option_position(experience, rule.get("experiencia_minima"), "rol_sugerido.experiencia_minima")
     control = rule.get("pregunta_control")
-    if control not in questions_by_id or questions_by_id[control].correct is None:
+    if control is not None and (control not in questions_by_id or questions_by_id[control].correct is None):
         _fail(source, f"rol_sugerido.pregunta_control «{control}» debe ser una pregunta con «correcta».")
     roles = (rule.get("si_cumple"), rule.get("si_no"))
     for role in roles:
         if role not in SUGGESTABLE_ROLES:
             _fail(source, f"rol_sugerido: «{role}» no es un rol sugerible ({', '.join(SUGGESTABLE_ROLES)}).")
 
+    legacy = data.get("legado") or {}
+    legacy_capital = tuple(
+        capital_choice(choice_id, _mapping(source, raw, "legado.capital"), "legado.capital")
+        for choice_id, raw in (legacy.get("capital") or {}).items()
+    )
+    legacy_horizon = tuple(
+        Choice(choice_id, _text(source, text, "legado.horizonte"))
+        for choice_id, text in (legacy.get("horizonte") or {}).items()
+    )
+
     return Questionnaire(
         version=version,
         levels=tuple(levels),
         thresholds=tuple(thresholds),
+        score_fields=score_fields,
+        capacity_question=capacity_question,
         capital_text=_text(source, capital.get("texto"), "la pregunta de capital"),
         capital_options=capital_options,
         horizon_text=_text(source, horizon.get("texto"), "la pregunta de horizonte"),
@@ -348,6 +410,9 @@ def parse_questionnaire(data, source: str = "cuestionario") -> Questionnaire:
         factor_labels=factor_labels,
         explanations=templates,
         role_rule=RoleRule(experience, min_experience, control, roles[0], roles[1]),
+        capital_levels=capital_levels,
+        legacy_capital=legacy_capital,
+        legacy_horizon=legacy_horizon,
         source=source,
     )
 

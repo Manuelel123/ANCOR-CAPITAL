@@ -1,7 +1,6 @@
 """Questionnaire wizard, profile result, role confirmation and "Mi perfil".
 
-The wizard has one step for the prior data (capital and horizon) and one per
-block of the questionnaire. Every submitted step is stored in the user's
+The wizard has one step per block of the questionnaire. Every submitted step is stored in the user's
 draft (``perfil_borradores``), so an unfinished questionnaire resumes where it
 was left; completing the last step saves a new current profile.
 """
@@ -15,13 +14,14 @@ from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 
 from optimizacion_portafolios.profiling import (
-    PRIOR_STEP,
+    PRIOR_FIELDS,
     VETO_FACTOR,
     AnswerError,
     Questionnaire,
     clean_answers,
     evaluate,
     explain,
+    format_points,
     format_score,
 )
 from optimizacion_portafolios.storage import db
@@ -46,7 +46,6 @@ ROLE_DESCRIPTIONS = {
     "inversionista": "Además: límites de peso, excluir activos, comparar HRP con Black-Litterman, fijar y rebalancear portafolios.",
 }
 ROLE_LABELS = {"novato": "Novato", "inversionista": "Inversionista", "gestor": "Gestor"}
-PRIOR_FIELDS = ("capital_rango", "horizonte")
 
 
 # Draft helpers -------------------------------------------------------------------
@@ -64,80 +63,80 @@ def _load_draft(questionnaire: Questionnaire) -> tuple[dict, int]:
 
 
 def _step_questions(questionnaire: Questionnaire, step: int):
-    step_id = questionnaire.steps[step]
-    return () if step_id == PRIOR_STEP else questionnaire.block(step_id).questions
+    return questionnaire.block(questionnaire.steps[step]).questions
+
+
+def _step_prior_fields(questionnaire: Questionnaire, step: int) -> list[str]:
+    layout = questionnaire.block(questionnaire.steps[step]).layout
+    return [field for field in layout if field in PRIOR_FIELDS]
 
 
 def _merge_step(questionnaire: Questionnaire, step: int, data: dict, form) -> list[str]:
     """Copy the valid answers of ``step`` from ``form`` into ``data``; return missing fields."""
-    if questionnaire.steps[step] == PRIOR_STEP:
-        lookups = {"capital_rango": questionnaire.capital, "horizonte": questionnaire.horizon}
-        for name, lookup in lookups.items():
-            value = form.get(name, "")
-            try:
-                lookup(value)
-            except KeyError:
-                continue
-            data[name] = value
-        return [name for name in PRIOR_FIELDS if not data.get(name)]
+    lookups = {"capital_rango": questionnaire.capital, "horizonte": questionnaire.horizon}
+    prior = _step_prior_fields(questionnaire, step)
+    for name in prior:
+        value = form.get(name, "")
+        try:
+            lookups[name](value)
+        except KeyError:
+            continue
+        data[name] = value
     questions = _step_questions(questionnaire, step)
     submitted = {question.id: form.get(question.id) for question in questions if question.id in form}
     data["respuestas"].update(clean_answers(questionnaire, submitted))
-    return [question.id for question in questions if question.id not in data["respuestas"]]
+    return [name for name in prior if not data.get(name)] + [
+        question.id for question in questions if question.id not in data["respuestas"]
+    ]
 
 
 def _first_incomplete_step(questionnaire: Questionnaire, data: dict) -> int | None:
     for step in range(len(questionnaire.steps)):
-        if questionnaire.steps[step] == PRIOR_STEP:
-            if any(not data.get(name) for name in PRIOR_FIELDS):
-                return step
-        elif any(question.id not in data["respuestas"] for question in _step_questions(questionnaire, step)):
+        if any(not data.get(name) for name in _step_prior_fields(questionnaire, step)):
+            return step
+        if any(question.id not in data["respuestas"] for question in _step_questions(questionnaire, step)):
             return step
     return None
 
 
-def _render_step(questionnaire: Questionnaire, step: int, data: dict, reached: int, missing=(), status=200):
-    step_id = questionnaire.steps[step]
-    titles = ["Datos previos"] + [block.title for block in questionnaire.blocks]
-    if step_id == PRIOR_STEP:
-        intro = "Cuéntanos con cuánto capital cuentas y por cuánto tiempo piensas invertir."
-        fields = [
-            {
-                "name": "capital_rango",
-                "legend": questionnaire.capital_text,
-                "options": [(choice.id, choice.text) for choice in questionnaire.capital_options],
-                "selected": data.get("capital_rango"),
-                "help": "Montos en pesos colombianos (COP).",
-            },
-            {
-                "name": "horizonte",
-                "legend": questionnaire.horizon_text,
-                "options": [(choice.id, choice.text) for choice in questionnaire.horizon_options],
-                "selected": data.get("horizonte"),
-                "help": None,
-            },
-        ]
+def _field(questionnaire: Questionnaire, name: str, number: int, data: dict) -> dict:
+    """Template data of one field of the wizard."""
+    if name == "capital_rango":
+        legend, options = questionnaire.capital_text, questionnaire.capital_options
+    elif name == "horizonte":
+        legend, options = questionnaire.horizon_text, questionnaire.horizon_options
     else:
-        block = questionnaire.block(step_id)
-        intro = block.description
-        # Questions are numbered across blocks (1 to 10 with the shipped file).
-        offset = sum(len(other.questions) for other in questionnaire.blocks[: step - 1])
-        fields = [
-            {
-                "name": question.id,
-                "legend": f"{number}. {question.text}",
-                "options": list(enumerate(question.options, start=1)),
-                "selected": data["respuestas"].get(question.id),
-                "help": None,
-            }
-            for number, question in enumerate(block.questions, start=offset + 1)
-        ]
+        question = questionnaire.question(name)
+        return {
+            "name": name,
+            "legend": f"{number}. {question.text}",
+            "options": list(enumerate(question.options, start=1)),
+            "selected": data["respuestas"].get(name),
+            "help": None,
+        }
+    return {
+        "name": name,
+        "legend": f"{number}. {legend}",
+        "options": [(choice.id, choice.text) for choice in options],
+        "selected": data.get(name),
+        "help": "Montos en pesos colombianos (COP)." if name == "capital_rango" else None,
+    }
+
+
+def _render_step(questionnaire: Questionnaire, step: int, data: dict, reached: int, missing=(), status=200):
+    block = questionnaire.block(questionnaire.steps[step])
+    # Questions are numbered across blocks (1 to 8 with the shipped file).
+    offset = sum(len(other.layout) for other in questionnaire.blocks[:step])
+    fields = [
+        _field(questionnaire, name, number, data)
+        for number, name in enumerate(block.layout, start=offset + 1)
+    ]
     return render_template(
         "profile/questionnaire.html",
         step=step,
-        intro=intro,
+        intro=block.description,
         fields=fields,
-        titles=titles,
+        titles=[other.title for other in questionnaire.blocks],
         reached=reached,
         data=data,
         missing=set(missing),
@@ -203,6 +202,12 @@ def save_step():
 
 
 # Result, role and "Mi perfil" ------------------------------------------------------
+def _emergency_fund_text(questionnaire: Questionnaire, profile: Profile) -> str | None:
+    question = questionnaire.question(questionnaire.capacity_question)
+    answer = (profile.respuestas or {}).get(question.id)
+    return question.options[answer - 1] if answer else None
+
+
 def _profile_view(questionnaire: Questionnaire, profile: Profile) -> dict:
     """Labels and the plain-language explanation of a saved profile."""
     explanation = None
@@ -221,9 +226,12 @@ def _profile_view(questionnaire: Questionnaire, profile: Profile) -> dict:
 
     def choice_text(lookup, choice_id):
         try:
-            return lookup(choice_id).text
+            return lookup(choice_id)
         except KeyError:
             return choice_id
+
+    current = profile.version_cuestionario == questionnaire.version
+    format_value = format_points if current else format_score
 
     try:
         description = questionnaire.level(profile.perfil_final).description
@@ -238,13 +246,17 @@ def _profile_view(questionnaire: Questionnaire, profile: Profile) -> dict:
         "is_veto": profile.factor_limitante == VETO_FACTOR,
         "explanation": explanation
         or f"Perfil calculado con la versión {profile.version_cuestionario} del cuestionario.",
-        "tolerance": (format_score(profile.puntaje_tolerancia), label(profile.nivel_tolerancia)),
-        "capacity": (format_score(profile.puntaje_capacidad), label(profile.nivel_capacidad)),
+        # Up to version 1: averages from 1 to 4 of tolerance and capacity.
+        "current_scale": current,
+        "score_max": questionnaire.max_score if current else 4,
+        "tolerance": (format_value(profile.puntaje_tolerancia), label(profile.nivel_tolerancia)),
+        "capacity": (format_value(profile.puntaje_capacidad), label(profile.nivel_capacidad)),
+        "emergency_fund": _emergency_fund_text(questionnaire, profile) if current else None,
         "horizon": (
-            choice_text(questionnaire.horizon, profile.horizonte),
+            choice_text(questionnaire.horizon_text_of, profile.horizonte),
             f"Máximo {label(profile.nivel_horizonte).lower()}" if horizon_capped else "Sin tope",
         ),
-        "capital": choice_text(questionnaire.capital, profile.capital_rango),
+        "capital": choice_text(questionnaire.capital_text_of, profile.capital_rango),
         "suggested_role": canonical_role(profile.rol_sugerido),
     }
 

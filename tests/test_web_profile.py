@@ -13,12 +13,11 @@ from test_web_accounts import AccountTestCase
 
 DISCLAIMER = "Información educativa. No es recomendación de inversión ni asesoría financiera."
 QUESTIONNAIRE_PATH = "/perfil/cuestionario"
-# One step per page: prior data, tolerance, capacity, knowledge.
+# One step per page: starting point, goal, backing.
 STEPS = (
-    {"capital_rango": "5m_20m", "horizonte": "de_1_a_3"},
-    {"p1": "3", "p2": "3", "p3": "3", "p4": "3", "p5": "3"},
-    {"p6": "4", "p7": "4", "p8": "4"},
-    {"k1": "3", "k2": "2"},
+    {"k1": "3", "capital_rango": "5m_30m", "aporte": "3"},
+    {"horizonte": "de_3_a_5", "p2": "3", "p1": "3"},
+    {"p6": "1", "decision": "2"},
 )
 
 
@@ -57,9 +56,10 @@ class MandatoryProfileTests(ProfileTestCase):
         response = self.sign_in_new()
         self.assertEqual(path_of(response), QUESTIONNAIRE_PATH)
         html = self.client.get(QUESTIONNAIRE_PATH).data.decode()
-        self.assertIn("Paso 1 de 4", html)
-        self.assertIn("Menos de 1 millón de pesos", html)
-        self.assertIn("Más de 3 años", html)
+        self.assertIn("Paso 1 de 3", html)
+        self.assertIn("Menos de $50.000", html)
+        self.assertIn("1. ¿Qué has hecho con tu plata hasta hoy?", html)
+        self.assertIn("2. ¿Con cuánto capital cuentas hoy para invertir?", html)
         with self.client.session_transaction() as session:
             self.assertNotIn("perfil", session)
 
@@ -96,7 +96,7 @@ class MandatoryProfileTests(ProfileTestCase):
         self.assertEqual(summary["usuario_id"], int(self.user_id_of()))
         self.assertEqual(summary["perfil_final"], "moderado")
         self.assertEqual(summary["perfil_etiqueta"], "Moderado")
-        self.assertEqual(summary["factor_limitante"], "capacidad")
+        self.assertEqual(summary["factor_limitante"], "tolerancia")
         self.assertEqual(self.client.get("/hrp").status_code, 200)
         html = self.client.get("/").data.decode()
         self.assertIn("Mi perfil", html)
@@ -118,21 +118,23 @@ class QuestionnaireFlowTests(ProfileTestCase):
         self.assertEqual([(vigente, final) for _id, vigente, final in rows], [(True, "moderado")])
         with self.app.app_context():
             profile = db.session.get(Profile, rows[0][0])
-            self.assertEqual(profile.factor_limitante, "horizonte")
-            self.assertEqual(profile.nivel_horizonte, "moderado")
-            self.assertEqual((profile.puntaje_tolerancia, profile.puntaje_capacidad), (3.0, 4.0))
-            self.assertEqual((profile.nivel_tolerancia, profile.nivel_capacidad), ("arriesgado", "arriesgado"))
+            self.assertEqual(profile.version_cuestionario, "2")
+            self.assertEqual(profile.factor_limitante, "tolerancia")
+            self.assertEqual(profile.nivel_horizonte, "arriesgado")
+            self.assertEqual((profile.puntaje_tolerancia, profile.puntaje_capacidad), (6.0, 1.0))
+            self.assertEqual((profile.nivel_tolerancia, profile.nivel_capacidad), ("moderado", "arriesgado"))
             self.assertEqual(profile.rol_sugerido, "inversionista")
             self.assertEqual(profile.respuestas["p1"], 3)
-            self.assertEqual((profile.capital_rango, profile.horizonte), ("5m_20m", "de_1_a_3"))
+            self.assertEqual((profile.capital_rango, profile.horizonte), ("5m_30m", "de_3_a_5"))
             self.assertEqual(db.session.scalars(select(ProfileDraft)).all(), [])
         with self.client.session_transaction() as session:
             self.assertEqual(session["perfil"]["id"], rows[0][0])
 
         result = self.client.get("/perfil/resultado").data.decode()
         self.assertIn(DISCLAIMER, result)
-        self.assertIn("Factor limitante: Horizonte de inversión.", result)
-        self.assertIn("1 a 3 años", result)
+        self.assertIn("Factor limitante: Puntaje de riesgo.", result)
+        self.assertIn("6 de 9", result)
+        self.assertIn("Entre 3 y 5 años", result)
         self.assertIn('value="inversionista" checked', result)
         self.assertNotIn('value="gestor"', result)
 
@@ -153,12 +155,13 @@ class QuestionnaireFlowTests(ProfileTestCase):
 
     def test_veto_answer_forces_adverse_and_is_explained(self):
         self.sign_in_new()
-        self.complete_questionnaire(p1="1", horizonte="mas_3")
+        self.complete_questionnaire(p6="3", horizonte="mas_5")
         rows = self.profiles("nuevo@example.com")
         self.assertEqual(rows[0][2], "adverso")
         html = self.client.get("/perfil/resultado").data.decode()
+        self.assertIn("Tu perfil: Conservador", html)
         self.assertIn("Factor limitante: Respuesta determinante.", html)
-        self.assertIn("vendería todo", html)
+        self.assertIn("Todavía no tienes un fondo de emergencia", html)
 
     def test_partial_progress_is_resumed_on_the_next_sign_in(self):
         self.sign_in_new()
@@ -168,7 +171,7 @@ class QuestionnaireFlowTests(ProfileTestCase):
         with self.app.app_context():
             draft = db.session.scalars(select(ProfileDraft)).one()
             self.assertEqual(draft.paso, 2)
-            self.assertEqual(draft.datos["capital_rango"], "5m_20m")
+            self.assertEqual(draft.datos["capital_rango"], "5m_30m")
             self.assertEqual(draft.datos["respuestas"]["p2"], 4)
             self.assertEqual(draft.datos["respuestas"]["p6"], 2)
         self.post("/auth/salir")
@@ -176,28 +179,27 @@ class QuestionnaireFlowTests(ProfileTestCase):
         response = self.post("/auth/ingresar", email="nuevo@example.com", password=TEST_PASSWORD)
         self.assertEqual(path_of(response), QUESTIONNAIRE_PATH)
         html = self.client.get(QUESTIONNAIRE_PATH).data.decode()
-        self.assertIn("Paso 3 de 4", html)
+        self.assertIn("Paso 3 de 3", html)
         self.assertIn('name="p6" value="2" checked', html)
         previous = self.client.get(QUESTIONNAIRE_PATH + "?paso=1").data.decode()
         self.assertIn('name="p2" value="4" checked', previous)
         # Steps not reached yet cannot be opened.
-        self.assertIn("Paso 3 de 4", self.client.get(QUESTIONNAIRE_PATH + "?paso=3").data.decode())
+        self.assertIn("Paso 3 de 3", self.client.get(QUESTIONNAIRE_PATH + "?paso=3").data.decode())
         self.refresh_csrf()
-        self.answer(2)
-        response = self.answer(3)
+        response = self.answer(2)
         self.assertEqual(path_of(response), "/perfil/resultado")
         self.assertEqual(len(self.profiles("nuevo@example.com")), 1)
 
     def test_incomplete_or_invalid_step_is_rejected(self):
         self.sign_in_new()
-        response = self.post(QUESTIONNAIRE_PATH, paso="0", accion="siguiente", capital_rango="5m_20m", horizonte="siempre")
+        response = self.post(QUESTIONNAIRE_PATH, paso="0", accion="siguiente", k1="3", capital_rango="1000")
         self.assertEqual(response.status_code, 400)
         self.assertIn("Responde todas las preguntas", response.data.decode())
         self.answer(0)
-        response = self.answer(1, p3="5")
+        response = self.answer(1, p1="5")
         self.assertEqual(response.status_code, 400)
         # Jumping ahead to an unreached step does nothing.
-        response = self.answer(3)
+        response = self.answer(2)
         self.assertEqual(path_of(response), QUESTIONNAIRE_PATH)
         self.assertEqual(self.profiles("nuevo@example.com"), [])
 
@@ -215,7 +217,7 @@ class RepeatQuestionnaireTests(ProfileTestCase):
         self.sign_in()
         mine = self.client.get("/perfil/").data.decode()
         self.assertIn(DISCLAIMER, mine)
-        self.assertIn("Factor limitante: Capacidad de asumir pérdidas.", mine)
+        self.assertIn("Factor limitante: Puntaje de riesgo.", mine)
         self.assertIn("queda guardado", mine)
         self.assertIn("Repetir cuestionario", mine)
         first = self.profiles("ana@example.com")
@@ -246,6 +248,44 @@ class RepeatQuestionnaireTests(ProfileTestCase):
             current = db.session.scalars(select(Profile).where(Profile.vigente.is_(True))).all()
         self.assertEqual(len(current), 1)
         self.assertEqual(len(self.profiles("ana@example.com")), 3)
+
+
+class VersionOneProfileTests(ProfileTestCase):
+    def legacy_profile(self, email):
+        """Turn the user's profile into one saved with version 1 of the questionnaire."""
+        user_id = int(self.user_id_of(email))
+        with self.app.app_context():
+            profile = db.session.scalars(select(Profile).where(Profile.usuario_id == user_id)).one()
+            profile.version_cuestionario = "1"
+            profile.capital_rango = "20m_100m"
+            profile.horizonte = "mas_3"
+            profile.respuestas = {"p1": 3, "p6": 2, "p7": 2, "p8": 3, "k1": 3, "k2": 2}
+            profile.puntaje_tolerancia, profile.puntaje_capacidad = 2.4, 2.33
+            profile.factor_limitante = "capacidad"
+            db.session.commit()
+
+    def test_a_saved_profile_is_kept_and_stays_readable(self):
+        self.sign_in()
+        self.legacy_profile("ana@example.com")
+        self.assertEqual(self.client.get("/hrp").status_code, 200)  # nothing to repeat
+        for path in ("/perfil/", "/perfil/resultado"):
+            html = self.client.get(path).data.decode()
+            self.assertIn("De 20 a 100 millones de pesos", html)
+            self.assertIn("Más de 3 años", html)
+            self.assertIn("2,40 de 4", html)
+            self.assertIn("Capacidad de asumir pérdidas", html)
+        self.assertEqual(len(self.profiles("ana@example.com")), 1)
+
+    def test_a_draft_of_version_1_is_discarded(self):
+        self.sign_in_new()
+        user_id = int(self.user_id_of("nuevo@example.com"))
+        with self.app.app_context():
+            db.session.add(ProfileDraft(
+                usuario_id=user_id, version_cuestionario="1", paso=2,
+                datos={"capital_rango": "5m_20m", "respuestas": {"p3": 3}},
+            ))
+            db.session.commit()
+        self.assertIn("Paso 1 de 3", self.client.get(QUESTIONNAIRE_PATH).data.decode())
 
 
 class RoleConfirmationTests(ProfileTestCase):

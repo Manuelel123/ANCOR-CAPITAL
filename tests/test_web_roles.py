@@ -365,7 +365,7 @@ class PortadaTests(unittest.TestCase):
         html = self.client.get("/").data.decode()
         self.assertIn("Hola, Ana", html)
         self.assertIn("Tu perfil vigente: Moderado", html)
-        self.assertIn("Factor limitante: Capacidad", html)
+        self.assertIn("Factor limitante: Puntaje", html)
         self.assertIn("Novato", html)
 
     def test_signed_in_without_profile_sees_no_tools(self):

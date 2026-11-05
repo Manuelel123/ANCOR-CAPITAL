@@ -11,7 +11,7 @@ from optimizacion_portafolios.profiling.avisos import DEFAULT_PATH, NoticesError
 from optimizacion_portafolios.storage import db
 from optimizacion_portafolios.storage.users import get_user_by_email
 from optimizacion_portafolios.web import create_app
-from support import TEST_PASSWORD, create_test_user, csrf_from, login_session
+from support import TEST_PASSWORD, add_test_profile, create_test_user, csrf_from, login_session
 
 DISCLAIMER = "Información educativa. No es recomendación de inversión ni asesoría financiera."
 NOTICE_PATH = "/aviso-datos"
@@ -109,6 +109,44 @@ class DataNoticeTests(OnboardingTestCase):
         response = self.post(NOTICE_PATH, acepto="1")
         self.assertNotEqual(path_of(response), "/perfil/cuestionario")
         self.assertEqual(self.client.get("/perfil/").status_code, 200)
+
+
+class ProfileRulesTests(OnboardingTestCase):
+    TOOLS = ("/hrp", "/black-litterman", "/portafolios/", "/historial")
+    ANSWERS = {"k1": 1, "aporte": 1, "p2": 4, "p1": 4, "p6": 1, "decision": 1}
+
+    def profiled(self, capital="1m_5m", horizon="mas_5", **answers):
+        user_id = self.sign_in(profile=False, role_confirmed=True)
+        add_test_profile(self.app, user_id, capital=capital, horizon=horizon, answers={**self.ANSWERS, **answers})
+        return self.client.get("/perfil/resultado").get_data(as_text=True)
+
+    def test_without_an_emergency_fund_the_profile_is_conservative_and_nothing_is_blocked(self):
+        for option, email in ((2, "parcial@example.com"), (3, "sin@example.com")):
+            with self.subTest(option=option):
+                self.client = self.app.test_client()
+                user_id = self.sign_in(email, profile=False, role_confirmed=True)
+                add_test_profile(self.app, user_id, horizon="mas_5", capital="1m_5m",
+                                 answers={**self.ANSWERS, "p6": option})
+                self.assertIn("Tu perfil: Conservador", self.client.get("/perfil/resultado").get_data(as_text=True))
+                for path in self.TOOLS:
+                    self.assertEqual(self.client.get(path).status_code, 200, path)
+
+    def test_needing_the_money_within_a_year_is_conservative_and_nothing_is_blocked(self):
+        self.assertIn("Tu perfil: Conservador", self.profiled(horizon="menos_1"))
+        for path in self.TOOLS:
+            self.assertEqual(self.client.get(path).status_code, 200, path)
+
+    def test_the_lowest_capital_gets_the_same_result_as_the_highest(self):
+        html = {}
+        for capital in ("menos_50k", "mas_30m"):
+            self.client = self.app.test_client()
+            user_id = self.sign_in(f"{capital}@example.com", profile=False, role_confirmed=True)
+            add_test_profile(self.app, user_id, capital=capital, horizon="mas_5", answers=self.ANSWERS)
+            html[capital] = self.client.get("/perfil/resultado").get_data(as_text=True)
+            for path in self.TOOLS:
+                self.assertEqual(self.client.get(path).status_code, 200, path)
+        for page in html.values():
+            self.assertIn("Tu perfil: Arriesgado", page)
 
 
 class NoticesFileTests(unittest.TestCase):

@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CSRF_PATTERN = re.compile(rb'name="csrf_token"\s+value="([^"]+)"')
 ERROR_FLASH = re.compile(rb'class="flash flash-error"[\s\S]*?class="flash__message">([^<]*)<')
 PASSWORD = "medicion-1"
-PROFILE_ANSWERS = {"p1": 3, "p2": 2, "p3": 3, "p4": 3, "p5": 2, "p6": 2, "p7": 2, "p8": 3, "k1": 3, "k2": 2}
+PROFILE_ANSWERS = {"k1": 3, "aporte": 3, "p2": 2, "p1": 3, "p6": 1, "decision": 2}
 USERS = {
     "novato": "novato@medicion.local",
     "inversionista": "inversionista@medicion.local",
@@ -108,7 +108,7 @@ def create_users(app) -> dict[str, str]:
     with app.app_context():
         for role, email in USERS.items():
             user = create_user(email, password_hash, display_name=role.title(), role=role, role_confirmed=True)
-            save_profile(user.id, evaluate(load_questionnaire(), "5m_20m", "mas_3", PROFILE_ANSWERS))
+            save_profile(user.id, evaluate(load_questionnaire(), "5m_30m", "mas_5", PROFILE_ANSWERS))
             ids[role] = str(user.id)
     return ids
 

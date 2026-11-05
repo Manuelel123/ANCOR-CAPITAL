@@ -71,14 +71,10 @@ def create_test_user(
         return str(user.id)
 
 
-# Complete answers of a "moderado" profile (limited by capacity), horizon over 3 years.
-TEST_PROFILE_CAPITAL = "5m_20m"
-TEST_PROFILE_HORIZON = "mas_3"
-TEST_PROFILE_ANSWERS = {
-    "p1": 3, "p2": 2, "p3": 3, "p4": 3, "p5": 2,
-    "p6": 2, "p7": 2, "p8": 3,
-    "k1": 3, "k2": 2,
-}
+# Complete answers of a "moderado" profile (6 of 9 points) with an emergency fund.
+TEST_PROFILE_CAPITAL = "5m_30m"
+TEST_PROFILE_HORIZON = "mas_5"
+TEST_PROFILE_ANSWERS = {"k1": 3, "aporte": 3, "p2": 2, "p1": 3, "p6": 1, "decision": 2}
 
 
 def add_test_profile(app, user_id, *, capital=TEST_PROFILE_CAPITAL, horizon=TEST_PROFILE_HORIZON, answers=None):
