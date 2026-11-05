@@ -95,7 +95,9 @@ class DataNoticeTests(OnboardingTestCase):
         html = self.client.get(NOTICE_PATH).get_data(as_text=True)
         for text in (*load_notices().uses, *load_notices().rights):
             self.assertIn(text, html)
-        self.assertIn("Responsable del tratamiento", html)
+        self.assertIn("Responsable del tratamiento: Ancor Capital.", html)
+        self.assertIn("ancorcapital@gmail.com", html)
+        self.assertNotIn("PENDIENTE", html)
         self.assertEqual(html.count('type="checkbox"'), 1)
         self.assertNotIn("checked", html)
         self.assertIn(DISCLAIMER, html)

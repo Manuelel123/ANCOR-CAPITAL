@@ -6,8 +6,8 @@
 version: 1
 
 # PENDIENTE: revisión legal (Ley 1581 de 2012)
-# Este texto es un borrador. Antes de publicar hay que completar el responsable y
-# el contacto; los derechos siguen el artículo 8 de la ley.
+# Este texto es un borrador. Los derechos siguen el artículo 8 de la ley; falta la
+# revisión del abogado.
 # `pendiente_revision: true` muestra en la pantalla que es un borrador; ponlo en
 # false solo cuando el texto esté aprobado.
 pendiente_revision: true
@@ -31,8 +31,8 @@ aviso_datos:
     - Revocar esta autorización o pedir que eliminen mis datos, si no hay un deber legal o contractual de conservarlos.
     - Consultar mis datos gratis.
     - Presentar quejas ante la Superintendencia de Industria y Comercio.
-  responsable: 'Responsable del tratamiento: [NOMBRE PENDIENTE].'
-  contacto: 'Para ejercer estos derechos, escribe a [CORREO PENDIENTE].'
+  responsable: 'Responsable del tratamiento: Ancor Capital.'
+  contacto: 'Para ejercer estos derechos, escribe a ancorcapital@gmail.com.'
   casilla: Leí el aviso y autorizo el tratamiento de mis datos.
 
 aviso_legal: >-
