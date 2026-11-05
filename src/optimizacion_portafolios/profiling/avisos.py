@@ -29,6 +29,10 @@ class DataNotice:
     title: str
     authorization: str
     uses: tuple[str, ...]
+    rights_title: str
+    rights: tuple[str, ...]
+    controller: str
+    contact: str
     checkbox: str
     legal_notice: str
 
@@ -54,12 +58,19 @@ def parse_notices(data, source: str = "avisos") -> DataNotice:
     uses = notice.get("usos")
     if not isinstance(uses, list) or len(uses) != USES_COUNT:
         raise NoticesError(f"{source}: «aviso_datos.usos» debe listar los {USES_COUNT} usos de los datos.")
+    rights = notice.get("derechos")
+    if not isinstance(rights, list) or not rights:
+        raise NoticesError(f"{source}: «aviso_datos.derechos» debe listar los derechos del titular.")
     return DataNotice(
         version=str(data["version"]),
         pending_review=pending,
         title=_text(source, notice.get("titulo"), "aviso_datos.titulo"),
         authorization=_text(source, notice.get("autorizacion"), "aviso_datos.autorizacion"),
         uses=tuple(_text(source, use, "aviso_datos.usos") for use in uses),
+        rights_title=_text(source, notice.get("derechos_titulo"), "aviso_datos.derechos_titulo"),
+        rights=tuple(_text(source, right, "aviso_datos.derechos") for right in rights),
+        controller=_text(source, notice.get("responsable"), "aviso_datos.responsable"),
+        contact=_text(source, notice.get("contacto"), "aviso_datos.contacto"),
         checkbox=_text(source, notice.get("casilla"), "aviso_datos.casilla"),
         legal_notice=_text(source, data.get("aviso_legal"), "aviso_legal"),
     )

@@ -93,8 +93,9 @@ class DataNoticeTests(OnboardingTestCase):
     def test_the_notice_shows_the_three_uses_and_is_not_preselected(self):
         self.sign_in(notice=False)
         html = self.client.get(NOTICE_PATH).get_data(as_text=True)
-        for use in load_notices().uses:
-            self.assertIn(use, html)
+        for text in (*load_notices().uses, *load_notices().rights):
+            self.assertIn(text, html)
+        self.assertIn("Responsable del tratamiento", html)
         self.assertEqual(html.count('type="checkbox"'), 1)
         self.assertNotIn("checked", html)
         self.assertIn(DISCLAIMER, html)
@@ -681,6 +682,13 @@ class NoticesFileTests(unittest.TestCase):
         del data["aviso_datos"]["casilla"]
         with self.assertRaisesRegex(NoticesError, "aviso_datos.casilla"):
             parse_notices(data)
+
+    def test_the_rights_and_the_controller_are_required(self):
+        for field in ("derechos", "responsable", "contacto"):
+            data = self.data()
+            del data["aviso_datos"][field]
+            with self.assertRaisesRegex(NoticesError, field):
+                parse_notices(data)
 
     def test_every_use_must_be_listed(self):
         data = self.data()
