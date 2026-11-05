@@ -318,7 +318,7 @@ class NoBlackLittermanForLearnersTests(unittest.TestCase):
             for path in self.PAGES:
                 with self.subTest(role=role, path=path):
                     html = client.get(path).data.decode()
-                    self.assertNotIn('href="/black-litterman"', html)
+                    self.assertNotIn("Black-Litterman", html)
                     self.assertNotIn('href="/comparar"', html)
 
     def test_the_gestor_keeps_it_in_mis_portafolios(self):

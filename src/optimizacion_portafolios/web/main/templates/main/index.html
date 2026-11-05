@@ -57,29 +57,16 @@
     </div>
     <ol class="landing-steps">
       <li class="card landing-step"><div class="card__body"><span class="step__number">1</span><h3 class="card__title">Crea tu cuenta</h3><p class="help-text">Solo necesitas un correo y una contraseña.</p></div></li>
-      <li class="card landing-step"><div class="card__body"><span class="step__number">2</span><h3 class="card__title">Responde tu perfil de riesgo</h3><p class="help-text">Diez preguntas sobre tu tolerancia, tu capacidad de asumir pérdidas y tu horizonte.</p></div></li>
-      <li class="card landing-step"><div class="card__body"><span class="step__number">3</span><h3 class="card__title">Explora con guía</h3><p class="help-text">Elige un grupo de activos y mira cómo cada método reparte el dinero y por qué.</p></div></li>
+      <li class="card landing-step"><div class="card__body"><span class="step__number">2</span><h3 class="card__title">Cuéntanos tu punto de partida</h3><p class="help-text">Ocho preguntas sobre tu experiencia, tu objetivo y tu respaldo.</p></div></li>
+      <li class="card landing-step"><div class="card__body"><span class="step__number">3</span><h3 class="card__title">Sigue tu recorrido</h3><p class="help-text">Recibes opciones para tu perfil y una guía paso a paso.</p></div></li>
     </ol>
-  </section>
-
-  <section class="section" aria-labelledby="roles-title">
-    <div class="section__header">
-      <p class="eyebrow">Para quién</p>
-      <h2 id="roles-title">Tres formas de usar Atlas</h2>
-      <p>Empiezas como novato; puedes elegir inversionista según tu perfil. El rol gestor lo asigna la administración.</p>
-    </div>
-    <div class="module-grid">
-      {% for name, summary in roles %}
-        <article class="card role-card"><div class="card__body"><span class="badge badge--neutral">{{ name }}</span><p>{{ summary }}</p></div></article>
-      {% endfor %}
-    </div>
   </section>
 
   <section class="section" aria-labelledby="method-title">
     <div class="section__header">
       <p class="eyebrow">Qué vas a aprender</p>
       <h2 id="method-title">Un método para repartir el riesgo</h2>
-      <p>Uno no necesita pronosticar retornos; el otro parte de lo que el mercado ya refleja. Los diagramas son ilustrativos, no resultados.</p>
+      <p>HRP reparte el dinero según el riesgo, sin intentar adivinar qué subirá más. El diagrama es ilustrativo, no un resultado.</p>
     </div>
     <div class="method-grid">
       <article class="method-card">
@@ -94,6 +81,14 @@
           </svg>
         </div>
         <p class="method-card__text">Agrupa los activos que se mueven parecido y reparte el dinero de arriba hacia abajo, para que cada grupo aporte un riesgo comparable. No intenta adivinar qué subirá más.</p>
+      </article>
+      <article class="method-card">
+        <div><p class="eyebrow">Tu diagnóstico</p><h3 class="method-card__title">Lo que ves depende de ti</h3></div>
+        <ul class="method-card__text">
+          <li><strong>Empiezas de cero:</strong> opciones sencillas y explicaciones claras.</li>
+          <li><strong>Ya inviertes:</strong> herramientas para construir tu portafolio.</li>
+          <li><strong>En todos los casos:</strong> una guía paso a paso y seguimiento en el tiempo.</li>
+        </ul>
       </article>
     </div>
   </section>
@@ -129,6 +124,5 @@
         </form>
       </div>
     </div>
-    <p class="method-note">Referencias: López de Prado, M. (2016), <cite>Building Diversified Portfolios that Outperform Out of Sample</cite>; Black, F. y Litterman, R. (1992), <cite>Global Portfolio Optimization</cite>.</p>
   </section>
 {% endblock %}

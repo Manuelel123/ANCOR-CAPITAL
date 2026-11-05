@@ -9,7 +9,7 @@
     <div>
       <p class="eyebrow">Pantalla principal</p>
       <h1>Hola, {{ current_user.name }}</h1>
-      <p class="lead">Rol: <span class="badge badge--neutral">{{ role_label }}</span> {{ role_summary }}</p>
+      <p class="lead">{{ 'Sigue tu recorrido: esto es lo que viene para ti.' if journey else 'Empecemos por conocerte.' }}</p>
     </div>
     <div class="page-header__actions">
       <a class="button button-secondary" href="{{ url_for('profile.mine') }}">Mi perfil</a>
@@ -26,21 +26,11 @@
 
   {% if journey %}{{ journey_card(journey) }}{% endif %}
 
-  {% if profile %}
-    <article class="card account-section dashboard-profile" aria-labelledby="perfil-vigente">
-      <header class="card__header">
-        <div><h2 class="card__title" id="perfil-vigente">Tu perfil vigente: {{ profile.perfil_etiqueta }}</h2><p class="card__subtitle">Factor limitante: {{ profile.factor_etiqueta }}</p></div>
-        <div class="card__actions"><a class="button button-ghost button-sm" href="{{ url_for('profile.mine') }}">Ver Mi perfil</a></div>
-      </header>
-      <div class="card__body"><p class="help-text">El factor limitante es lo que más pesó para que tu perfil quedara en ese nivel. Tenlo presente al leer los resultados: un portafolio que se mueve mucho puede no ir con tu perfil.</p></div>
-    </article>
-  {% endif %}
-
   {% if tools %}
     <section class="section" aria-labelledby="tools-title">
       <div class="section__header">
         <p class="eyebrow">Herramientas</p>
-        <h2 id="tools-title">Lo que puedes usar con tu rol</h2>
+        <h2 id="tools-title">Tus herramientas</h2>
       </div>
       <div class="module-grid">
         {% for tool in tools %}
@@ -55,5 +45,15 @@
         {% endfor %}
       </div>
     </section>
+  {% endif %}
+
+  {% if profile %}
+    <article class="card account-section dashboard-profile" aria-labelledby="perfil-vigente">
+      <header class="card__header">
+        <div><h2 class="card__title" id="perfil-vigente">Tu perfil vigente: {{ profile.perfil_etiqueta }}</h2><p class="card__subtitle">Factor limitante: {{ profile.factor_etiqueta }}</p></div>
+        <div class="card__actions"><a class="button button-ghost button-sm" href="{{ url_for('profile.mine') }}">Ver Mi perfil</a></div>
+      </header>
+      <div class="card__body"><p class="help-text">El factor limitante es lo que más pesó para que tu perfil quedara en ese nivel. Tenlo presente al leer los resultados: un portafolio que se mueve mucho puede no ir con tu perfil.</p></div>
+    </article>
   {% endif %}
 {% endblock %}

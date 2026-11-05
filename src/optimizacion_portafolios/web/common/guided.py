@@ -276,8 +276,9 @@ GUIDED_TERMS = (
     "Rebalanceo",
     "Benchmark",
     "HRP (Hierarchical Risk Parity)",
-    "Black-Litterman",
 )
+# Only the gestor has Black-Litterman; nobody else needs these terms.
+GESTOR_TERMS = frozenset({"Capitalización bursátil", "Equilibrio de mercado", "View", "Black-Litterman"})
 
 
 def glossary(terms=None) -> list[tuple[str, str]]:

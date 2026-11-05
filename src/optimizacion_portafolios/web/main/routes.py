@@ -11,12 +11,11 @@ from optimizacion_portafolios.data.catalogs import (
     BENCHMARKS,
 )
 from optimizacion_portafolios.web.auth.permissions import (
-    ROLE_SUMMARIES,
     can_open,
-    role_label,
 )
 from optimizacion_portafolios.web.auth.passwords import password_rules
 from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE
+from optimizacion_portafolios.web.common.guided import GESTOR_TERMS, GLOSSARY
 from optimizacion_portafolios.web.common.guided import glossary as glossary_items
 from optimizacion_portafolios.web.guia.journey import build_journey
 from optimizacion_portafolios.web.main import bp
@@ -135,11 +134,6 @@ TOOLS = (
         "description": "Diversificación, volatilidad, correlación, drawdown, Sharpe y más, en lenguaje simple.",
     },
 )
-ROLES_OVERVIEW = (
-    ("Novato", ROLE_SUMMARIES["novato"]),
-    ("Inversionista", ROLE_SUMMARIES["inversionista"]),
-    ("Gestor", ROLE_SUMMARIES["gestor"]),
-)
 
 
 def catalog_asset_count() -> int:
@@ -163,7 +157,6 @@ def index():
         return render_template(
             "main/index.html",
             stats=stats,
-            roles=ROLES_OVERVIEW,
             password_rules=password_rules(),
         )
     # The home page is public, so the access checks do not run here.
@@ -190,12 +183,11 @@ def index():
         profile=current_profile(),
         journey=journey,
         pending_step=step,
-        role_label=role_label(current_user.role),
-        role_summary=ROLE_SUMMARIES.get(current_user.role, ""),
         tools=tools,
     )
 
 
 @bp.get("/glosario")
 def glossary():
-    return render_template("main/glossary.html", items=glossary_items())
+    terms = [term for term in GLOSSARY if can_open("black_litterman.black_litterman") or term not in GESTOR_TERMS]
+    return render_template("main/glossary.html", items=glossary_items(terms))
