@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "macros/learning.html" import educational_notice %}
+{% block title %}Introducción{% endblock %}
+{% block content %}
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Introducción</p>
+      <h1>Así funciona Ancor Capital</h1>
+      <p class="lead">Ancor Capital te ayuda a entender cómo se arma un portafolio, paso a paso y sin tecnicismos.</p>
+    </div>
+  </header>
+  {{ educational_notice(always=True) }}
+
+  <section class="section" aria-labelledby="recorrido-titulo">
+    <div class="section__header">
+      <p class="eyebrow">El recorrido</p>
+      <h2 id="recorrido-titulo">Cuatro pasos</h2>
+    </div>
+    <div class="manage-grid">
+      <article class="card">
+        <header class="card__header"><div><h3 class="card__title">1. Tu perfil</h3></div></header>
+        <div class="card__body"><p>Respondes unas preguntas y Ancor Capital ubica tu nivel de riesgo.</p></div>
+      </article>
+      <article class="card">
+        <header class="card__header"><div><h3 class="card__title">2. Opciones explicadas</h3></div></header>
+        <div class="card__body"><p>Ves ejemplos de portafolios y por qué cada activo pesa lo que pesa, con HRP guiado.</p></div>
+      </article>
+      <article class="card">
+        <header class="card__header"><div><h3 class="card__title">3. Guía hasta tu primera inversión</h3></div></header>
+        <div class="card__body"><p>Cómo abrir una cuenta y fondearla paso a paso. Empezamos con Interactive Brokers.</p></div>
+      </article>
+      <article class="card">
+        <header class="card__header"><div><h3 class="card__title">4. Seguimiento</h3></div></header>
+        <div class="card__body"><p>Cómo va tu inversión en el tiempo.</p></div>
+      </article>
+    </div>
+  </section>
+
+  <p class="lead">Primero te preguntamos qué has hecho con tu plata y, con tus respuestas, armamos tu recorrido.</p>
+
+  <div class="page-header__actions">
+    <a class="button button-primary" href="{{ url_for(next_step) }}">Continuar</a>
+  </div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "macros/learning.html" import educational_notice %}
+{% block title %}Guía de Interactive Brokers{% endblock %}
+{% block content %}
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Guía educativa</p>
+      <h1>{{ 'Tu cuenta en Interactive Brokers' if has_account else 'Abre tu cuenta en Interactive Brokers' }}</h1>
+      <p class="lead">{{ guide.referencia }}</p>
+      <p class="help-text">Verificado el {{ guide.verificado }}. Las cifras pueden cambiar: verifica en IBKR.</p>
+    </div>
+    <div class="page-header__actions">
+      <a class="button button-secondary" href="{{ guide.enlace_oficial }}" rel="noopener noreferrer" target="_blank">Sitio oficial de IBKR</a>
+    </div>
+  </header>
+  {{ educational_notice(always=True) }}
+
+  {% if guide.referido_ibkr %}
+    <p class="notice notice--warning" role="note"><strong>{{ guide.aviso_comision }}</strong></p>
+  {% endif %}
+
+  {% if has_account %}
+    <p class="notice notice--info" role="note">{{ guide.ya_tiene_cuenta }}</p>
+  {% elif low_capital %}
+    <section class="card account-section" aria-labelledby="capital-titulo">
+      <header class="card__header"><div><h2 class="card__title" id="capital-titulo">{{ guide.capital.bajo.ejemplos_titulo }}</h2></div></header>
+      <div class="card__body">
+        <p>{{ guide.capital.bajo.nota }}</p>
+        <ul>
+          {% for example in guide.capital.bajo.ejemplos %}<li>{{ example.nombre }}: {{ example.desde }}</li>{% endfor %}
+        </ul>
+        <p class="help-text">{{ guide.capital.bajo.ejemplos_nota }} Fuente: {{ guide.capital.bajo.ejemplos_fuente }}. Verificado el {{ guide.capital.bajo.ejemplos_verificado }}.</p>
+      </div>
+    </section>
+  {% elif known_capital %}
+    <p class="notice notice--info" role="note">{{ guide.capital.medio_alto.nota }}</p>
+  {% endif %}
+
+  <div class="manage-grid account-section">
+    <section class="card" aria-labelledby="criterio-titulo">
+      <header class="card__header"><div><h2 class="card__title" id="criterio-titulo">{{ guide.criterio.titulo }}</h2></div></header>
+      <div class="card__body">
+        <ul>
+          {% for point in guide.criterio.puntos %}<li>{{ point }}</li>{% endfor %}
+        </ul>
+        <p>{{ guide.estado_referido.con_acuerdo if guide.referido_ibkr else guide.estado_referido.sin_acuerdo }}</p>
+        <p>{{ guide.alternativa }}</p>
+      </div>
+    </section>
+    <section class="card" aria-labelledby="apoyo-titulo">
+      <header class="card__header"><div><h2 class="card__title" id="apoyo-titulo">{{ guide.datos_apoyo.titulo }}</h2></div></header>
+      <div class="card__body">
+        <ul>
+          {% for point in guide.datos_apoyo.puntos %}<li>{{ point }}</li>{% endfor %}
+        </ul>
+        <p><strong>{{ guide.datos_apoyo.contras_titulo }}</strong></p>
+        <ul>
+          {% for point in guide.datos_apoyo.contras %}<li>{{ point }}</li>{% endfor %}
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <section class="section" aria-labelledby="pasos-titulo">
+    <div class="section__header">
+      <p class="eyebrow">Paso a paso</p>
+      <h2 id="pasos-titulo">{{ 'Lo que sigue con tu cuenta' if has_account else 'De cero a tu primera compra' }}</h2>
+    </div>
+    {% for step in steps %}
+      <article class="card account-section">
+        <header class="card__header"><div><h3 class="card__title">{{ loop.index }}. {{ step.titulo }}</h3></div></header>
+        <div class="card__body">
+          <p><strong>Qué hacer:</strong> {{ step.que_hacer }}</p>
+          <p><strong>Por qué importa:</strong> {{ step.por_que }}</p>
+          {% if step.advertencia %}<p class="notice notice--warning" role="note">{{ step.advertencia }}</p>{% endif %}
+          {% if step.nota %}<p class="help-text">{{ step.nota }}</p>{% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+
+  <section class="card account-section" aria-labelledby="confirmar-titulo">
+    <header class="card__header"><div><h2 class="card__title" id="confirmar-titulo">{{ guide.por_confirmar.titulo }}</h2></div></header>
+    <div class="card__body">
+      <ul>
+        {% for point in guide.por_confirmar.puntos %}<li>{{ point }}</li>{% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="card account-section" aria-labelledby="fuentes-titulo">
+    <header class="card__header"><div><h2 class="card__title" id="fuentes-titulo">Fuentes</h2></div></header>
+    <div class="card__body">
+      <ul>
+        {% for source in guide.fuentes %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.titulo }}</a> ({{ source.fecha }})</li>{% endfor %}
+      </ul>
+    </div>
+  </section>
+{% endblock %}

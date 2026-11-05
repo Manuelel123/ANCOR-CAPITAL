@@ -1,0 +1,25 @@
+{# "Tu recorrido": category and next steps, on the result page and the home page. #}
+{% macro journey_card(journey) %}
+  <section class="card account-section" aria-labelledby="recorrido-titulo">
+    <header class="card__header">
+      <div>
+        <p class="eyebrow">Tu recorrido</p>
+        <h2 class="card__title" id="recorrido-titulo">Categoría {{ journey.category.label }}</h2>
+        <p class="card__subtitle">{{ journey.category.description }}</p>
+      </div>
+    </header>
+    <div class="card__body">
+      <p>{{ 'Ya inviertes' if journey.invests else 'Estás empezando' }}. Estos son tus próximos pasos:</p>
+      <ol>
+        {% for step in journey.steps %}
+          <li><a href="{{ url_for(step.destino) }}"><strong>{{ step.titulo }}</strong></a>: {{ step.descripcion }}</li>
+        {% endfor %}
+      </ol>
+      <p><strong>{{ journey.guidelines_title }}</strong></p>
+      <ul>
+        {% for guideline in journey.guidelines %}<li>{{ guideline }}</li>{% endfor %}
+      </ul>
+      {% if journey.contribution %}<p class="help-text">Aporte mensual que indicaste: {{ journey.contribution }}.</p>{% endif %}
+    </div>
+  </section>
+{% endmacro %}

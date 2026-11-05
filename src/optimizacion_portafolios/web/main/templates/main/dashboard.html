@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros/learning.html" import educational_notice %}
+{% from "guia/_journey.html" import journey_card %}
 {% block title %}Inicio{% endblock %}
 
 {% block content %}
@@ -8,7 +9,7 @@
     <div>
       <p class="eyebrow">Pantalla principal</p>
       <h1>Hola, {{ current_user.name }}</h1>
-      <p class="lead">Rol: <span class="badge badge--neutral">{{ role_label }}</span> {{ role_summary }}</p>
+      <p class="lead">{{ 'Sigue tu recorrido: esto es lo que viene para ti.' if journey else 'Empecemos por conocerte.' }}</p>
     </div>
     <div class="page-header__actions">
       <a class="button button-secondary" href="{{ url_for('profile.mine') }}">Mi perfil</a>
@@ -21,28 +22,15 @@
       <header class="card__header"><div><h2 class="card__title">Completa tu perfil de riesgo</h2><p class="card__subtitle">Antes de usar las herramientas necesitamos conocer tu tolerancia, tu capacidad de asumir pérdidas y tu horizonte.</p></div></header>
       <div class="card__footer"><a class="button button-primary" href="{{ url_for('profile.questionnaire') }}">Responder el cuestionario</a></div>
     </article>
-  {% elif pending_step == "profile.result" %}
-    <article class="card account-section">
-      <header class="card__header"><div><h2 class="card__title">Confirma tu rol</h2><p class="card__subtitle">Elige cómo quieres usar Atlas para desbloquear las herramientas.</p></div></header>
-      <div class="card__footer"><a class="button button-primary" href="{{ url_for('profile.result') }}">Ver mi resultado y elegir rol</a></div>
-    </article>
   {% endif %}
 
-  {% if profile %}
-    <article class="card account-section dashboard-profile" aria-labelledby="perfil-vigente">
-      <header class="card__header">
-        <div><h2 class="card__title" id="perfil-vigente">Tu perfil vigente: {{ profile.perfil_etiqueta }}</h2><p class="card__subtitle">Factor limitante: {{ profile.factor_etiqueta }}</p></div>
-        <div class="card__actions"><a class="button button-ghost button-sm" href="{{ url_for('profile.mine') }}">Ver Mi perfil</a></div>
-      </header>
-      <div class="card__body"><p class="help-text">El factor limitante es lo que más pesó para que tu perfil quedara en ese nivel. Tenlo presente al leer los resultados: un portafolio que se mueve mucho puede no ir con tu perfil.</p></div>
-    </article>
-  {% endif %}
+  {% if journey %}{{ journey_card(journey) }}{% endif %}
 
   {% if tools %}
     <section class="section" aria-labelledby="tools-title">
       <div class="section__header">
         <p class="eyebrow">Herramientas</p>
-        <h2 id="tools-title">Lo que puedes usar con tu rol</h2>
+        <h2 id="tools-title">Tus herramientas</h2>
       </div>
       <div class="module-grid">
         {% for tool in tools %}
@@ -57,5 +45,38 @@
         {% endfor %}
       </div>
     </section>
+  {% endif %}
+
+  {% if profile %}
+    <article class="card account-section dashboard-profile" aria-labelledby="perfil-vigente">
+      <header class="card__header">
+        <div><h2 class="card__title" id="perfil-vigente">Tu perfil vigente: {{ profile.perfil_etiqueta }}</h2><p class="card__subtitle">Factor limitante: {{ profile.factor_etiqueta }}</p></div>
+        <div class="card__actions"><a class="button button-ghost button-sm" href="{{ url_for('profile.mine') }}">Ver Mi perfil</a></div>
+      </header>
+      <div class="card__body"><p class="help-text">El factor limitante es lo que más pesó para que tu perfil quedara en ese nivel. Tenlo presente al leer los resultados: un portafolio que se mueve mucho puede no ir con tu perfil.</p></div>
+    </article>
+  {% endif %}
+  {% if gestor_portfolios %}
+    <details class="card account-section">
+      <summary class="card__header"><span class="card__title">Ver los portafolios del gestor</span></summary>
+      <div class="card__body">
+        <p class="help-text">Son ejemplos educativos, no una recomendación. Solo puedes verlos. Abre el panel para ver la información actualizada.</p>
+        <div class="account-grid">
+          {% for portfolio in gestor_portfolios %}
+            <article class="card account-card">
+              <div class="card__body">
+                <h3 class="account-card__title"><a href="{{ url_for('portfolios.shared', portfolio_id=portfolio.id) }}">{{ portfolio.name }}</a></h3>
+                <dl class="account-metrics">
+                  <div><dt>Rendimiento</dt><dd>{{ portfolio.total_return|pct }}</dd></div>
+                  <div><dt>Activos</dt><dd>{{ portfolio.asset_count }}</dd></div>
+                  <div><dt>Establecido el</dt><dd>{{ portfolio.tracking_start }}</dd></div>
+                </dl>
+                <a class="button button-secondary button-sm" href="{{ url_for('portfolios.shared', portfolio_id=portfolio.id) }}">Ver panel</a>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
   {% endif %}
 {% endblock %}

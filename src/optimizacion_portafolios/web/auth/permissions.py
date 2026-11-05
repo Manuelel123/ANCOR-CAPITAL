@@ -33,11 +33,12 @@ GESTOR = "gestor"
 EVERYONE = frozenset({NOVATO, INVERSIONISTA, GESTOR})
 INVESTORS = frozenset({INVERSIONISTA, GESTOR})
 MANAGERS = frozenset({GESTOR})
+LEARNERS = frozenset({NOVATO, INVERSIONISTA})
 
 ROLE_LABELS = {NOVATO: "Novato", INVERSIONISTA: "Inversionista", GESTOR: "Gestor"}
 ROLE_SUMMARIES = {
-    NOVATO: "HRP y Black-Litterman guiados, con explicaciones y glosario. Mis portafolios en solo lectura.",
-    INVERSIONISTA: "Lo del novato, más límites de peso, excluir activos, comparar HRP con Black-Litterman, fijar y gestionar portafolios.",
+    NOVATO: "HRP guiado, con explicaciones y glosario. Eliges activos y fijas tu portafolio; luego lo sigues.",
+    INVERSIONISTA: "Lo del novato, más límites de peso y gestión de tus portafolios.",
     GESTOR: "Acceso total: todos los parámetros, Mercado y Opciones, backtests, señales y gestión.",
 }
 
@@ -46,10 +47,15 @@ ROLE_SUMMARIES = {
 ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "main.index": EVERYONE,
     "main.glossary": EVERYONE,
+    "onboarding.data_notice": EVERYONE,
+    "onboarding.introduction": EVERYONE,
+    "guia.interactive_brokers": EVERYONE,
+    # The gestor stays as in the original app: no diagnosis, no category.
+    "guia.options": LEARNERS,
     "decisions.history": EVERYONE,
     "hrp.hrp": EVERYONE,
-    "black_litterman.black_litterman": EVERYONE,
-    "compare.compare": INVESTORS,
+    "black_litterman.black_litterman": MANAGERS,
+    "compare.compare": MANAGERS,
     "monitoring.monitoring": MANAGERS,
     # JSON for the price explorer, shown only on the gestor's full pages.
     "history.asset_history": MANAGERS,
@@ -58,12 +64,16 @@ ENDPOINT_ROLES: dict[str, frozenset[str]] = {
     "portfolios.detail": EVERYONE,
     "portfolios.alerts": EVERYONE,
     "portfolios.versions": EVERYONE,
-    "portfolios.fix": INVESTORS,
+    "portfolios.fix": EVERYONE,
     "portfolios.manage": INVESTORS,
     "portfolios.preview": INVESTORS,
     "portfolios.confirm": INVESTORS,
     "portfolios.archive": INVESTORS,
     "portfolios.signals": MANAGERS,
+    "portfolios.shared": EVERYONE,
+    "portfolios.rename": MANAGERS,
+    "portfolios.visibility": MANAGERS,
+    "portfolios.delete": MANAGERS,
     "account.backtests": MANAGERS,
     "account.backtest_detail": MANAGERS,
     "account.delete_backtest": MANAGERS,
@@ -84,11 +94,12 @@ FEATURE_ROLES: dict[str, frozenset[str]] = {
     "market": MANAGERS,
     "signals": MANAGERS,
     "backtest_history": MANAGERS,
+    "administer_portfolios": MANAGERS,
     # Guided pages: choose the assets (exclude some) and a maximum weight.
     "weight_limits": INVESTORS,
-    "exclude_assets": INVESTORS,
-    "compare": INVESTORS,
-    "fix_portfolio": INVESTORS,
+    "exclude_assets": EVERYONE,
+    "compare": MANAGERS,
+    "fix_portfolio": EVERYONE,
     "manage_portfolio": INVESTORS,
     "edit_alerts": INVESTORS,
 }

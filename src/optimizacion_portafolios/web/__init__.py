@@ -136,6 +136,7 @@ def _configure_storage(app: Flask, testing: bool) -> None:
     login_manager.init_app(app)
     with app.app_context():
         if testing:
+            app.config.setdefault("DOLLAR_RATE", None)  # no network in the tests
             db.create_all()
         elif os.environ.get("ATLAS_AUTO_MIGRATE", "1") != "0" and os.path.isdir(
             os.path.join(MIGRATIONS_DIRECTORY, "versions")
@@ -251,10 +252,12 @@ def _register_blueprints(app: Flask) -> None:
     from optimizacion_portafolios.web.black_litterman import bp as black_litterman_bp
     from optimizacion_portafolios.web.compare import bp as compare_bp
     from optimizacion_portafolios.web.decisions import bp as decisions_bp
+    from optimizacion_portafolios.web.guia import bp as guia_bp
     from optimizacion_portafolios.web.history import bp as history_bp
     from optimizacion_portafolios.web.hrp import bp as hrp_bp
     from optimizacion_portafolios.web.main import bp as main_bp
     from optimizacion_portafolios.web.monitoring import bp as monitoring_bp
+    from optimizacion_portafolios.web.onboarding import bp as onboarding_bp
     from optimizacion_portafolios.web.profile import bp as profile_bp
 
     app.register_blueprint(main_bp)
@@ -268,6 +271,8 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(account_bp)
     app.register_blueprint(portfolios_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(onboarding_bp)
+    app.register_blueprint(guia_bp)
 
 
 def _register_csrf_protection(app: Flask) -> None:

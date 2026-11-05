@@ -6,10 +6,12 @@
   {% set check_icon %}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"/></svg>{% endset %}
   <section class="hero" aria-labelledby="hero-title">
     <div class="hero__copy">
+      <img class="hero__logo logo-light" src="{{ url_for('static', filename='img/ancor-vertical.png') }}" alt="Ancor Capital, inversión explicada">
+      <img class="hero__logo logo-dark" src="{{ url_for('static', filename='img/ancor-vertical-claro.png') }}" alt="Ancor Capital, inversión explicada">
       <p class="eyebrow">Laboratorio educativo de portafolios</p>
       <h1 id="hero-title" class="hero__title">Aprende a construir portafolios con <span class="text-accent">método</span>, no con intuición.</h1>
-      <p class="hero__lead">Atlas es una herramienta para aprender cómo se reparte el dinero entre varios activos y por qué. Está pensada para personas jóvenes que están empezando y quieren entender la diversificación, el riesgo y dos métodos usados por profesionales: Hierarchical Risk Parity y Black-Litterman.</p>
-      {{ educational_notice("Atlas usa datos históricos y modelos con supuestos: sirve para aprender, no para decidir en qué invertir.") }}
+      <p class="hero__lead">Ancor Capital es una herramienta para aprender cómo se reparte el dinero entre varios activos y por qué. Está pensada para personas jóvenes que están empezando y quieren entender la diversificación, el riesgo y un método usado por profesionales: Hierarchical Risk Parity.</p>
+      {{ educational_notice("Ancor Capital usa datos históricos y modelos con supuestos: sirve para aprender, no para decidir en qué invertir.") }}
       <div class="hero__actions">
         <a class="button button-primary" href="{{ url_for('auth.register') }}">Crear cuenta gratis <span class="arrow" aria-hidden="true">→</span></a>
         <a class="button button-secondary" href="{{ url_for('auth.login') }}">Ya tengo cuenta</a>
@@ -23,7 +25,7 @@
 
     <div class="card auth-card landing-login" id="ingresar">
       <div class="card__body">
-        <p class="eyebrow">Cuenta Atlas</p>
+        <p class="eyebrow">Cuenta Ancor Capital</p>
         <h2 class="auth-card__title">Inicia sesión</h2>
         <p class="auth-card__lead">Ingresa con tu correo y contraseña.</p>
         <form method="post" action="{{ url_for('auth.login') }}" class="form-stack" novalidate>
@@ -43,7 +45,7 @@
     </div>
   </section>
 
-  <dl class="stats-strip" aria-label="Qué incluye Atlas">
+  <dl class="stats-strip" aria-label="Qué incluye Ancor Capital">
     {% for stat in stats %}
       <div class="stats-strip__item"><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div>
     {% endfor %}
@@ -57,29 +59,16 @@
     </div>
     <ol class="landing-steps">
       <li class="card landing-step"><div class="card__body"><span class="step__number">1</span><h3 class="card__title">Crea tu cuenta</h3><p class="help-text">Solo necesitas un correo y una contraseña.</p></div></li>
-      <li class="card landing-step"><div class="card__body"><span class="step__number">2</span><h3 class="card__title">Responde tu perfil de riesgo</h3><p class="help-text">Diez preguntas sobre tu tolerancia, tu capacidad de asumir pérdidas y tu horizonte.</p></div></li>
-      <li class="card landing-step"><div class="card__body"><span class="step__number">3</span><h3 class="card__title">Explora con guía</h3><p class="help-text">Elige un grupo de activos y mira cómo cada método reparte el dinero y por qué.</p></div></li>
+      <li class="card landing-step"><div class="card__body"><span class="step__number">2</span><h3 class="card__title">Cuéntanos tu punto de partida</h3><p class="help-text">Ocho preguntas sobre tu experiencia, tu objetivo y tu respaldo.</p></div></li>
+      <li class="card landing-step"><div class="card__body"><span class="step__number">3</span><h3 class="card__title">Sigue tu recorrido</h3><p class="help-text">Recibes opciones para tu perfil y una guía paso a paso.</p></div></li>
     </ol>
-  </section>
-
-  <section class="section" aria-labelledby="roles-title">
-    <div class="section__header">
-      <p class="eyebrow">Para quién</p>
-      <h2 id="roles-title">Tres formas de usar Atlas</h2>
-      <p>Empiezas como novato; puedes elegir inversionista según tu perfil. El rol gestor lo asigna la administración.</p>
-    </div>
-    <div class="module-grid">
-      {% for name, summary in roles %}
-        <article class="card role-card"><div class="card__body"><span class="badge badge--neutral">{{ name }}</span><p>{{ summary }}</p></div></article>
-      {% endfor %}
-    </div>
   </section>
 
   <section class="section" aria-labelledby="method-title">
     <div class="section__header">
       <p class="eyebrow">Qué vas a aprender</p>
-      <h2 id="method-title">Dos enfoques complementarios</h2>
-      <p>Uno no necesita pronosticar retornos; el otro parte de lo que el mercado ya refleja. Los diagramas son ilustrativos, no resultados.</p>
+      <h2 id="method-title">Un método para repartir el riesgo</h2>
+      <p>HRP reparte el dinero según el riesgo, sin intentar adivinar qué subirá más. El diagrama es ilustrativo, no un resultado.</p>
     </div>
     <div class="method-grid">
       <article class="method-card">
@@ -96,21 +85,12 @@
         <p class="method-card__text">Agrupa los activos que se mueven parecido y reparte el dinero de arriba hacia abajo, para que cada grupo aporte un riesgo comparable. No intenta adivinar qué subirá más.</p>
       </article>
       <article class="method-card">
-        <div><p class="eyebrow">Equilibrio + views</p><h3 class="method-card__title">Black-Litterman</h3></div>
-        <div class="method-card__diagram" aria-hidden="true">
-          <svg viewBox="0 0 300 140" focusable="false">
-            <rect class="diagram__node" x="8" y="14" width="112" height="44" rx="8"/>
-            <text class="diagram__text" x="64" y="40" text-anchor="middle">Equilibrio</text>
-            <rect class="diagram__node" x="8" y="82" width="112" height="44" rx="8"/>
-            <text class="diagram__text" x="64" y="108" text-anchor="middle">Views</text>
-            <path class="diagram__line" d="M120 36h40q12 0 12 12v14M120 104h40q12 0 12-12V78"/>
-            <path class="diagram__line diagram__line--accent" d="M172 70h26"/>
-            <path class="diagram__arrowhead" d="m207 70-9-5v10z"/>
-            <rect class="diagram__node diagram__node--accent" x="208" y="46" width="84" height="48" rx="8"/>
-            <text class="diagram__text diagram__text--accent" x="250" y="74" text-anchor="middle">Portafolio</text>
-          </svg>
-        </div>
-        <p class="method-card__text">Parte del peso que el mercado le da a cada activo por su tamaño, lo combina con opiniones (views) y busca el mejor retorno esperado por unidad de riesgo.</p>
+        <div><p class="eyebrow">Tu diagnóstico</p><h3 class="method-card__title">Lo que ves depende de ti</h3></div>
+        <ul class="method-card__text">
+          <li><strong>Empiezas de cero:</strong> opciones sencillas y explicaciones claras.</li>
+          <li><strong>Ya inviertes:</strong> herramientas para construir tu portafolio.</li>
+          <li><strong>En todos los casos:</strong> una guía paso a paso y seguimiento en el tiempo.</li>
+        </ul>
       </article>
     </div>
   </section>
@@ -146,6 +126,5 @@
         </form>
       </div>
     </div>
-    <p class="method-note">Referencias: López de Prado, M. (2016), <cite>Building Diversified Portfolios that Outperform Out of Sample</cite>; Black, F. y Litterman, R. (1992), <cite>Global Portfolio Optimization</cite>.</p>
   </section>
 {% endblock %}

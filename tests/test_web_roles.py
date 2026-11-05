@@ -91,9 +91,9 @@ PAGES = {
     "/historial": ROLES,
     "/perfil/": ROLES,
     "/hrp": ROLES,
-    "/black-litterman": ROLES,
+    "/black-litterman": ("gestor",),
     "/portafolios/": ROLES,
-    "/comparar": ("inversionista", "gestor"),
+    "/comparar": ("gestor",),
     "/monitoring": ("gestor",),
     "/cuenta/backtests": ("gestor",),
     "/api/historial?ticker=%3C%3E": ("gestor",),
@@ -125,9 +125,9 @@ class PermissionTableTests(unittest.TestCase):
             "signals": ("gestor",),
             "market": ("gestor",),
             "weight_limits": ("inversionista", "gestor"),
-            "exclude_assets": ("inversionista", "gestor"),
-            "compare": ("inversionista", "gestor"),
-            "fix_portfolio": ("inversionista", "gestor"),
+            "exclude_assets": ("novato", "inversionista", "gestor"),
+            "compare": ("gestor",),
+            "fix_portfolio": ("novato", "inversionista", "gestor"),
             "manage_portfolio": ("inversionista", "gestor"),
             "edit_alerts": ("inversionista", "gestor"),
         }
@@ -150,11 +150,9 @@ class MatrixMixin:
         html = self.client.get("/").data.decode()
         nav = re.search(r'<nav class="site-nav"[^>]*>(.*?)</nav>', html, re.S).group(1)
         links = set(re.findall(r'href="([^"]+)"', nav))
-        expected = {"/", "/hrp", "/black-litterman", "/portafolios/"}
-        if self.role == "inversionista":
-            expected.add("/comparar")
+        expected = {"/", "/hrp", "/portafolios/"}
         if self.role == "gestor":
-            expected.add("/monitoring")  # the original menu, without the new pages
+            expected |= {"/monitoring", "/black-litterman"}  # the original menu
         self.assertEqual(links, expected)
         self.assertEqual("/cuenta/backtests" in html, self.role == "gestor")
 
@@ -188,7 +186,6 @@ class NovatoTests(MatrixMixin, RoleTestCase):
             ("post", f"/portafolios/{portfolio_id}/gestionar/vista-previa", {"action": "rebalance", "rebalance_method": "targets"}),
             ("post", f"/portafolios/{portfolio_id}/gestionar/confirmar", {"token": "x"}),
             ("post", f"/portafolios/{portfolio_id}/archivar", {}),
-            ("post", "/portafolios/fijar", {"snapshot": self.snapshot_token(), "step": "confirm", "name": "Nuevo"}),
         ]
         for method, path, data in blocked:
             with self.subTest(path=path, method=method):
@@ -203,9 +200,10 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         html = self.client.get("/hrp").data.decode()
         self.assertIn("Vista guiada", html)
         for field in ('name="start_date"', 'name="min_weight"', 'name="max_weight"', 'name="custom_tickers"',
-                      'name="backtest"', 'name="benchmark"', 'name="tickers"'):
+                      'name="backtest"', 'name="benchmark"'):
             self.assertNotIn(field, html, field)
-        self.assertIn('name="universe" value="Acciones y Bitcoin"', html)
+        self.assertIn('name="tickers"', html)
+        self.assertIn("data-universe-select", html)
         self.assertIn("Glosario", html)
 
     @patch("optimizacion_portafolios.web.hrp.services.download_prices", side_effect=priced)
@@ -219,7 +217,7 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         self.assertEqual(response.status_code, 200)
         html = response.data.decode()
         tickers, start, _end = download.call_args_list[0].args
-        self.assertEqual(tickers, ("AAPL", "MSFT", "GOOGL", "BTC-USD"))
+        self.assertEqual(tickers, ("AAPL", "MSFT"))
         self.assertEqual(start, guided.guided_start())
         self.assertEqual(download.call_args_list[1].args[0], ("SPY",))
         self.assertEqual(download.call_count, 2)  # no backtest download
@@ -228,7 +226,7 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         self.assertIn("volatilidad anual", html)
         self.assertIn("correlación promedio con el resto", html)
         self.assertIn("Diversificación", html)  # glossary
-        self.assertNotIn("Establecer como portafolio óptimo", html)
+        self.assertIn("Establecer como portafolio óptimo", html)
         self.assertNotIn("Backtest de rebalanceo", html)
         weights = [float(value) for value in re.findall(r'<td class="num">(\d+\.\d+)%</td>', html)]
         self.assertAlmostEqual(sum(weights), 100.0, places=1)
@@ -239,31 +237,6 @@ class NovatoTests(MatrixMixin, RoleTestCase):
         self.assertEqual(response.mimetype, "text/html")
         self.assertNotIn("Content-Disposition", response.headers)
 
-    @patch("optimizacion_portafolios.web.black_litterman.services.fetch_market_cap_usd", side_effect=MARKET_CAPS.__getitem__)
-    @patch("optimizacion_portafolios.web.black_litterman.services.download_prices", side_effect=priced)
-    def test_guided_black_litterman_uses_neutral_views_and_fixed_inputs(self, _download, _caps):
-        from optimizacion_portafolios.web.black_litterman import services
-
-        with patch.object(services, "run_black_litterman", wraps=services.run_black_litterman) as run:
-            response = self.post(
-                "/black-litterman", action="optimize", universe="Acciones y Bitcoin",
-                objective="Mínima varianza", risk_free_rate="10", view_AAPL="50", view_MSFT="-20",
-                tickers=["AAPL"], custom_tickers="NVDA",
-            )
-        html = response.data.decode()
-        self.assertEqual(run.call_count, 2)
-        first, second = run.call_args_list
-        self.assertEqual(first.args[0], ["AAPL", "MSFT", "GOOGL", "BTC-USD"])
-        tickers, views, objective, risk_free, benchmark, start = second.args[:6]
-        self.assertEqual((objective, risk_free, benchmark, start), ("Máximo ratio de Sharpe", 0.02, "SPY", guided.guided_start()))
-        self.assertEqual(set(views), set(tickers))
-        self.assertNotIn(0.5, views.values())
-        self.assertEqual(notice_block(html), NOTICE)
-        self.assertIn("¿Por qué cada activo recibe ese peso?", html)
-        self.assertIn("por su tamaño (capitalización bursátil)", html)
-        self.assertIn("Equilibrio de mercado", html)
-        self.assertNotIn('name="view_', html)
-        self.assertNotIn('name="objective"', html)
 
 
 class InversionistaTests(MatrixMixin, RoleTestCase):
@@ -294,25 +267,6 @@ class InversionistaTests(MatrixMixin, RoleTestCase):
         self.assert_denied(self.client.get(f"/portafolios/{portfolio_id}/senales"))
         self.assertNotIn("/senales", self.client.get(f"/portafolios/{portfolio_id}").data.decode())
 
-    @patch("optimizacion_portafolios.web.compare.services.download_prices", side_effect=priced)
-    @patch("optimizacion_portafolios.web.black_litterman.services.fetch_market_cap_usd", side_effect=MARKET_CAPS.__getitem__)
-    @patch("optimizacion_portafolios.web.black_litterman.services.download_prices", side_effect=priced)
-    @patch("optimizacion_portafolios.web.hrp.services.download_prices", side_effect=priced)
-    def test_comparison_shows_both_methods_side_by_side(self, *_mocks):
-        html = self.post("/comparar", action="optimize", universe="Acciones y Bitcoin",
-                         tickers=["AAPL", "MSFT", "GOOGL"], max_weight="60").data.decode()
-        self.assertEqual(notice_block(html), NOTICE)
-        self.assertIn("Pesos lado a lado", html)
-        table = re.search(r'<table class="data-table compare-table".*?</table>', html, re.S).group(0)
-        self.assertEqual(len(re.findall(r"<tr>", table)), 4)  # header + 3 assets
-        for ticker in ("AAPL", "MSFT", "GOOGL"):
-            self.assertIn(ticker, table)
-        self.assertNotIn("BTC-USD", table)
-        metrics = re.search(r'<table class="data-table" id="compare-metrics">.*?</table>', html, re.S).group(0)
-        for label in ("Retorno anual compuesto", "Volatilidad anualizada", "Ratio de Sharpe", "Caída máxima"):
-            self.assertIn(label, metrics)
-        self.assertNotIn("N/D", metrics)
-        self.assertEqual(html.count("Establecer como portafolio óptimo"), 2)
 
 
 class GestorTests(MatrixMixin, RoleTestCase):
@@ -341,6 +295,37 @@ class GestorTests(MatrixMixin, RoleTestCase):
                 self.assertNotIn("Glosario", html, path)
 
 
+class OnlyHrpTests(unittest.TestCase):
+    def test_only_hrp_is_offered_to_novato_and_inversionista(self):
+        for endpoint in ("black_litterman.black_litterman", "compare.compare"):
+            for role in ("novato", "inversionista"):
+                self.assertFalse(permissions.role_allows(role, endpoint))
+            self.assertTrue(permissions.role_allows("gestor", endpoint))
+
+
+class NoBlackLittermanForLearnersTests(unittest.TestCase):
+    PAGES = ("/", "/hrp", "/portafolios/", "/historial", "/glosario", "/perfil/", "/introduccion")
+
+    def client_for(self, role):
+        app = create_app({"TESTING": True, "SECRET_KEY": "test-secret"})
+        client = app.test_client()
+        login_session(client, create_test_user(app, f"{role}@example.com", role=role, role_confirmed=True))
+        return client
+
+    def test_no_page_links_to_it(self):
+        for role in ("novato", "inversionista"):
+            client = self.client_for(role)
+            for path in self.PAGES:
+                with self.subTest(role=role, path=path):
+                    html = client.get(path).data.decode()
+                    self.assertNotIn("Black-Litterman", html)
+                    self.assertNotIn('href="/comparar"', html)
+
+    def test_the_gestor_keeps_it_in_mis_portafolios(self):
+        html = self.client_for("gestor").get("/portafolios/").data.decode()
+        self.assertIn('href="/black-litterman"', html)
+
+
 class PortadaTests(unittest.TestCase):
     def setUp(self):
         self.app = create_app({"TESTING": True, "SECRET_KEY": "test-secret"})
@@ -357,6 +342,20 @@ class PortadaTests(unittest.TestCase):
                               "metric-card__value", 'href="/hrp"', 'href="/portafolios/"'):
             self.assertNotIn(result_marker, html, result_marker)
 
+    def test_the_brand_is_ancor_capital(self):
+        html = self.client.get("/").data.decode()
+        self.assertIn("· Ancor Capital</title>", html)
+        self.assertIn('alt="Ancor Capital, inversión explicada"', html)
+        self.assertNotIn("Atlas", html)
+        self.assertNotIn("Portfolio Lab", html)
+
+    def test_every_logo_of_the_page_exists(self):
+        html = self.client.get("/").data.decode()
+        logos = set(re.findall(r'src="(/static/img/[^"]+)"', html)) | set(re.findall(r'href="(/static/img/[^"]+)"', html))
+        self.assertGreaterEqual(len(logos), 5)
+        for logo in logos:
+            self.assertEqual(self.client.get(logo).status_code, 200, logo)
+
     def test_portada_login_form_signs_in(self):
         create_test_user(self.app, "ana@example.com")
         token = csrf_from(self.client.get("/"))
@@ -365,7 +364,7 @@ class PortadaTests(unittest.TestCase):
         html = self.client.get("/").data.decode()
         self.assertIn("Hola, Ana", html)
         self.assertIn("Tu perfil vigente: Moderado", html)
-        self.assertIn("Factor limitante: Capacidad", html)
+        self.assertIn("Factor limitante: Puntaje", html)
         self.assertIn("Novato", html)
 
     def test_signed_in_without_profile_sees_no_tools(self):

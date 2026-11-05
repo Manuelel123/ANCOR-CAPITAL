@@ -1,25 +1,35 @@
 {% extends "base.html" %}
 {% from "portfolios/_macros.html" import disclaimer, money, traffic_light, portfolio_tabs %}
 {% from "macros/charts.html" import plotly_chart %}
+{% from "macros/account.html" import fix_portfolio_control with context %}
 {% block title %}{{ portfolio.name }}{% endblock %}
 {% block content %}
   {% set tracking = portfolio.tracking %}
   <header class="page-header">
     <div>
-      <p class="eyebrow"><a href="{{ url_for('portfolios.index') }}">Mis portafolios</a> · {{ portfolio.model }} · {{ portfolio.status_label }}</p>
+      <p class="eyebrow">{% if shared %}<a href="{{ url_for('main.index') }}">Inicio</a> · Portafolio del gestor{% else %}<a href="{{ url_for('portfolios.index') }}">Mis portafolios</a>{% endif %} · {{ portfolio.model }} · {{ portfolio.status_label }}</p>
       <h1>{{ portfolio.name }}</h1>
       <p class="lead">Seguimiento desde {{ portfolio.tracking_start }} · Benchmark {{ portfolio.benchmark_label }} · versión {{ portfolio.version.number }} ({{ portfolio.version.reason }}, {{ portfolio.version.effective_date }})</p>
     </div>
     {{ traffic_light(portfolio.alerts.level, portfolio.alerts.level_label) }}
   </header>
-  {{ portfolio_tabs(portfolio.id, 'detail') }}
+  {% if shared %}
+    <p class="notice notice--info" role="note">Es un ejemplo educativo, no una recomendación. Se actualiza con los precios de hoy.</p>
+    {% if copy_token %}
+      <div class="shared-actions">{{ fix_portfolio_control(copy_token) }}</div>
+    {% elif copy_locked %}
+      <p class="help-text"><a href="{{ url_for('hrp.hrp') }}">Establecer este portafolio se habilita junto con la optimización.</a></p>
+    {% endif %}
+  {% else %}
+    {{ portfolio_tabs(portfolio.id, 'detail') }}
+  {% endif %}
   {{ disclaimer() }}
 
   {% if portfolio.alerts.open %}
     <div class="notice notice--{{ 'danger' if portfolio.alerts.level == 'red' else 'warning' }}" role="status">
       <strong>{{ portfolio.alerts.open|length }} alerta{{ 's' if portfolio.alerts.open|length != 1 }} activa{{ 's' if portfolio.alerts.open|length != 1 }}:</strong>
       {% for event in portfolio.alerts.open %}{{ event.message }}{{ '; ' if not loop.last }}{% endfor %}.
-      <a href="{{ url_for('portfolios.alerts', portfolio_id=portfolio.id) }}">Ver alertas</a>
+      {% if not shared %}<a href="{{ url_for('portfolios.alerts', portfolio_id=portfolio.id) }}">Ver alertas</a>{% endif %}
     </div>
   {% endif %}
 
@@ -68,7 +78,7 @@
 
     {% if portfolio.alerts.rules %}
       <article class="card account-section">
-        <header class="card__header"><div><h2 class="card__title">Semáforo de reglas</h2><p class="card__subtitle">Valor actual de cada regla activa · <a href="{{ url_for('portfolios.alerts', portfolio_id=portfolio.id) }}">{{ 'editar umbrales' if can('edit_alerts') else 'ver alertas' }}</a></p></div></header>
+        <header class="card__header"><div><h2 class="card__title">Semáforo de reglas</h2><p class="card__subtitle">Valor actual de cada regla activa{% if not shared %} · <a href="{{ url_for('portfolios.alerts', portfolio_id=portfolio.id) }}">{{ 'editar umbrales' if can('edit_alerts') else 'ver alertas' }}</a>{% endif %}</p></div></header>
         <ul class="rule-lights">
           {% for rule in portfolio.alerts.rules %}
             <li>{{ traffic_light(rule.level, rule.level_label) }}<span>{{ rule.label }}</span><strong>{{ rule.value }}</strong></li>
@@ -77,6 +87,7 @@
       </article>
     {% endif %}
 
+    {% if not shared %}
     <section class="metric-groups" aria-label="Métricas de seguimiento">
       {% for group in tracking.groups %}
         <article class="card">
@@ -89,8 +100,10 @@
         </article>
       {% endfor %}
     </section>
+    {% endif %}
   {% endif %}
 
+  {% if not shared %}
   <article class="card account-section">
     <header class="card__header"><div><h2 class="card__title">Posiciones vigentes</h2><p class="card__subtitle">Versión {{ portfolio.version.number }} · comisión {{ '%g'|format(portfolio.commission_bps) }} pb</p></div></header>
     <div class="data-table-wrap">
@@ -139,6 +152,7 @@
         </table>
       </div>
     </article>
+  {% endif %}
   {% endif %}
 {% endblock %}
 {% block page_scripts %}

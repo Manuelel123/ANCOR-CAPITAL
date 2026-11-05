@@ -1,7 +1,9 @@
 """Portada (signed out), main screen (signed in) and glossary."""
 
-from flask import render_template
+from flask import redirect, render_template, url_for
 from flask_login import current_user
+
+from optimizacion_portafolios.storage.profiles import get_current_profile
 
 from optimizacion_portafolios.data.catalogs import (
     ACTIVOS_HRP,
@@ -9,15 +11,20 @@ from optimizacion_portafolios.data.catalogs import (
     BENCHMARKS,
 )
 from optimizacion_portafolios.web.auth.permissions import (
-    ROLE_SUMMARIES,
     can_open,
-    role_label,
 )
 from optimizacion_portafolios.web.auth.passwords import password_rules
 from optimizacion_portafolios.web.auth.roles import GESTOR_ROLE
+from optimizacion_portafolios.web.common.guided import GESTOR_TERMS, GLOSSARY
 from optimizacion_portafolios.web.common.guided import glossary as glossary_items
+from optimizacion_portafolios.web.guia.journey import build_journey
 from optimizacion_portafolios.web.main import bp
-from optimizacion_portafolios.web.profile.access import current_profile, pending_profile_step
+from optimizacion_portafolios.web.portfolios.services import public_portfolios
+from optimizacion_portafolios.web.profile.access import (
+    current_profile,
+    pending_onboarding_step,
+    pending_profile_step,
+)
 
 MODEL_COUNT = 2
 DATA_SOURCE_COUNT = 2
@@ -107,17 +114,26 @@ TOOLS = (
         "description": "Cada portafolio que generaste, con fecha, perfil vigente, método, pesos y supuestos.",
     },
     {
+        "key": "options",
+        "endpoint": "guia.options",
+        "eyebrow": "Para ti",
+        "title": "Opciones para tu perfil",
+        "description": "Ejemplos de instrumentos según tu categoría y tu capital.",
+    },
+    {
+        "key": "guide",
+        "endpoint": "guia.interactive_brokers",
+        "eyebrow": "Guía",
+        "title": "Abrir cuenta en Interactive Brokers",
+        "description": "El broker de referencia, paso a paso: qué hacer, por qué importa y qué falta confirmar.",
+    },
+    {
         "key": "glossary",
         "endpoint": "main.glossary",
         "eyebrow": "Aprende",
         "title": "Glosario",
         "description": "Diversificación, volatilidad, correlación, drawdown, Sharpe y más, en lenguaje simple.",
     },
-)
-ROLES_OVERVIEW = (
-    ("Novato", ROLE_SUMMARIES["novato"]),
-    ("Inversionista", ROLE_SUMMARIES["inversionista"]),
-    ("Gestor", ROLE_SUMMARIES["gestor"]),
 )
 
 
@@ -136,15 +152,18 @@ def index():
     if not current_user.is_authenticated:
         stats = (
             {"value": catalog_asset_count(), "label": "activos e índices en catálogo"},
-            {"value": MODEL_COUNT, "label": "métodos de construcción de portafolios"},
+            {"value": 1, "label": "método de construcción de portafolios"},
             {"value": DATA_SOURCE_COUNT, "label": "fuentes de datos de mercado"},
         )
         return render_template(
             "main/index.html",
             stats=stats,
-            roles=ROLES_OVERVIEW,
             password_rules=password_rules(),
         )
+    # The home page is public, so the access checks do not run here.
+    onboarding_step = pending_onboarding_step(current_user)
+    if onboarding_step:
+        return redirect(url_for(onboarding_step))
     if current_user.role == GESTOR_ROLE:
         # The gestor uses the app exactly as before the educational layer.
         stats = (
@@ -153,20 +172,24 @@ def index():
             {"value": DATA_SOURCE_COUNT, "label": "fuentes de datos de mercado"},
         )
         return render_template("main/original_index.html", modules=GESTOR_MODULES, stats=stats)
-    # The home page is public, so the access checks do not run here: a user
-    # without a profile (or role) sees the pending step instead of the tools.
+    # A user without a profile (or role) sees the pending step instead of the tools.
     step = pending_profile_step(current_user)
     tools = [] if step else [tool for tool in TOOLS if can_open(tool["endpoint"])]
+    saved_profile = get_current_profile(current_user.id)
+    journey = build_journey(saved_profile) if saved_profile else None
+    if journey and journey.has_ibkr:  # the card is for opening the account
+        tools = [tool for tool in tools if tool["key"] != "guide"]
     return render_template(
         "main/dashboard.html",
         profile=current_profile(),
+        journey=journey,
+        gestor_portfolios=public_portfolios(),
         pending_step=step,
-        role_label=role_label(current_user.role),
-        role_summary=ROLE_SUMMARIES.get(current_user.role, ""),
         tools=tools,
     )
 
 
 @bp.get("/glosario")
 def glossary():
-    return render_template("main/glossary.html", items=glossary_items())
+    terms = [term for term in GLOSSARY if can_open("black_litterman.black_litterman") or term not in GESTOR_TERMS]
+    return render_template("main/glossary.html", items=glossary_items(terms))

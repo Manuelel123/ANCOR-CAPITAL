@@ -7,7 +7,7 @@
     <div>
       <p class="eyebrow">Cuenta</p>
       <h1>Mi historial de decisiones</h1>
-      <p class="lead">Cada portafolio que generaste con HRP o Black-Litterman queda registrado con la fecha, tu perfil vigente en ese momento, el método, los pesos y los supuestos. Es un historial verificable: no se puede editar ni borrar.</p>
+      <p class="lead">Cada portafolio que generaste con {{ 'HRP o Black-Litterman' if can_open('black_litterman.black_litterman') else 'HRP' }} queda registrado con la fecha, tu perfil vigente en ese momento, el método, los pesos y los supuestos. Es un historial verificable: no se puede editar ni borrar.</p>
     </div>
     <div class="page-header__actions"><a class="button button-secondary" href="{{ url_for('profile.mine') }}">Mi perfil</a></div>
   </header>
@@ -57,7 +57,7 @@
   {% else %}
     <div class="empty-state">
       <p class="empty-state__title">Todavía no hay registros</p>
-      <p>Calcula un portafolio en <a href="{{ url_for('hrp.hrp') }}">HRP</a> o <a href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a> y aparecerá aquí.</p>
+      <p>Calcula un portafolio en <a href="{{ url_for('hrp.hrp') }}">HRP</a>{% if can_open('black_litterman.black_litterman') %} o <a href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a>{% endif %} y aparecerá aquí.</p>
     </div>
   {% endif %}
 {% endblock %}

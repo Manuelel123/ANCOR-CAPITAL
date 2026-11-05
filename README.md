@@ -1,6 +1,6 @@
-# Atlas · Analítica de portafolios
+# Ancor Capital · Inversión explicada
 
-Herramienta web **educativa** (Flask) para personas jóvenes e inexpertas que quieren aprender a construir portafolios: qué es diversificar, cómo se mide el riesgo y cómo reparten el dinero dos métodos profesionales, Hierarchical Risk Parity (HRP) y Black-Litterman. Cada usuario responde primero un perfil de riesgo y usa las herramientas según su rol (novato, inversionista o gestor). Los precios históricos se descargan de Tiingo (con Yahoo Finance como respaldo) y los datos fundamentales, capitalizaciones y tipos de cambio se consultan en Yahoo Finance.
+Herramienta web **educativa** (Flask) para personas jóvenes e inexpertas que quieren aprender a construir portafolios: qué es diversificar, cómo se mide el riesgo y cómo reparte el dinero un método profesional, Hierarchical Risk Parity (HRP). Cada usuario responde un diagnóstico y ve opciones según su categoría; el gestor conserva además Black-Litterman. Los precios históricos se descargan de Tiingo (con Yahoo Finance como respaldo) y los datos fundamentales, capitalizaciones y tipos de cambio se consultan en Yahoo Finance.
 
 > **Información educativa. No es recomendación de inversión ni asesoría financiera.**
 > Este aviso aparece en la portada y en todas las pantallas con resultados (HRP, Black-Litterman, comparación, Mercado, Mis portafolios, backtests y Mi perfil). Lo genera la macro `educational_notice()` de `web/templates/macros/learning.html`.
@@ -52,7 +52,7 @@ Los correos salen por Gmail SMTP. Configura en `.env`:
 ```dotenv
 MAIL_USERNAME=tu-cuenta@gmail.com
 MAIL_PASSWORD=xxxx xxxx xxxx xxxx     # contraseña de aplicación, no la normal
-# MAIL_FROM=Atlas <tu-cuenta@gmail.com>   (opcional)
+# MAIL_FROM=Ancor Capital <tu-cuenta@gmail.com>   (opcional)
 # MAIL_SMTP_HOST=smtp.gmail.com  MAIL_SMTP_PORT=465   (valores por defecto)
 ```
 
@@ -62,25 +62,29 @@ La contraseña de aplicación se crea en tu cuenta de Google → Seguridad → V
 
 ```dotenv
 BREVO_API_KEY=xkeysib-...                # Brevo → SMTP & API → API Keys
-MAIL_FROM=Atlas <tu-cuenta@gmail.com>    # obligatorio: remitente verificado en Brevo
+MAIL_FROM=Ancor Capital <tu-cuenta@gmail.com>    # obligatorio: remitente verificado en Brevo
 ```
 
 En Brevo, registra y confirma ese correo en **Senders, Domains & Dedicated IPs → Senders** antes de enviar; si no, Brevo rechaza el envío (el motivo queda en el log del servidor). Con un remitente `@gmail.com` algunos mensajes pueden llegar a spam; un dominio propio autenticado en Brevo lo evita.
 
 ## Uso: flujo de pantallas y roles
 
-1. **Sin sesión** solo se ve la portada (`/`): qué es Atlas, para quién es, el aviso educativo y los formularios de inicio de sesión y registro. No muestra herramientas ni resultados (los diagramas de la portada están rotulados como ilustrativos).
-2. **Tras iniciar sesión**, si falta el perfil de riesgo la app lleva al cuestionario y luego a confirmar el rol (ver «Perfil de riesgo obligatorio» más abajo).
-3. **Pantalla principal** (`/` con sesión): saludo, perfil vigente (perfil final y factor limitante, con enlace a Mi perfil), rol y las herramientas disponibles para ese rol. La barra de navegación muestra solo lo que el rol permite.
+1. **Sin sesión** solo se ve la portada (`/`): qué es Ancor Capital, para quién es, el aviso educativo y los formularios de inicio de sesión y registro. No muestra herramientas ni resultados (los diagramas de la portada están rotulados como ilustrativos).
+2. **Aviso de tratamiento de datos** (`/aviso-datos`, pantalla 0): tras verificar el correo, el usuario acepta el aviso con una sola casilla antes de usar la app; el gestor no pasa por esta pantalla (ver «Aviso de datos» más abajo).
+3. **Introducción** (`/introduccion`): se abre sola una vez, después del aviso, y queda en el menú de usuario. Explica el recorrido. El gestor no la recibe automáticamente.
+4. **Perfil y diagnóstico:** si falta el perfil de riesgo la app lleva al cuestionario. El resultado muestra la categoría (Inicial, Intermedio o Avanzado) y «Tu recorrido», con los próximos pasos; el rol se asigna solo (ver «Perfil de riesgo obligatorio» más abajo).
+5. **Pantalla principal** (`/` con sesión): saludo, perfil vigente (perfil final y factor limitante, con enlace a Mi perfil), rol y las herramientas disponibles para ese rol. La barra de navegación muestra solo lo que el rol permite.
 
 | | Novato | Inversionista | Gestor |
 |---|---|---|---|
-| HRP y Black-Litterman | Vista guiada: solo elige un universo predefinido; explicación de cada peso y glosario | Vista guiada + excluir activos y peso máximo por activo (HRP) | Páginas completas: todos los parámetros, informe QuantStats, explorador de precios |
-| Comparar HRP vs Black-Litterman (`/comparar`) | — | Sí | Sí |
-| Mis portafolios | Solo lectura: panel, alertas y versiones | Fijar, editar alertas, gestionar (rebalancear, altas, bajas) y archivar | Todo, más señales |
+| HRP | Vista guiada: elige un universo o sus propios activos (de 2 a 20); explicación de cada peso y glosario | Vista guiada + peso máximo por activo | Páginas completas: todos los parámetros, informe QuantStats, explorador de precios |
+| Black-Litterman y Comparar (`/black-litterman`, `/comparar`) | — | — | Sí |
+| Opciones para tu perfil (`/guia/opciones`) | Sí | Sí | — |
+| Mis portafolios | Fijar con la optimización habilitada; luego solo lectura: panel, alertas y versiones | Fijar, editar alertas, gestionar (rebalancear, altas, bajas) y archivar | Todo, más señales |
 | Mercado (incluida Opciones), `/api/historial`, `/api/ohlc` | — | — | Sí |
 | Backtest de HRP e historial de backtests | — | — | Sí |
 | Glosario, Mi perfil, Mi historial de decisiones | Sí | Sí | Sí |
+| Introducción y guía de Interactive Brokers (`/guia/interactive-brokers`) | Sí | Sí | Sí (por URL) |
 
 - **Valores fijos de la vista guiada** (`web/common/guided.py`): últimos 2 años de precios (la misma ventana de Black-Litterman, para que los dos métodos sean comparables), benchmark S&P 500 (SPY), HRP sin límites (0 %–100 %; el inversionista puede fijar el peso máximo), Black-Litterman con objetivo «Máximo ratio de Sharpe», tasa libre de riesgo 2 % y **views neutrales**: iguales al retorno de equilibrio de cada activo (una primera ejecución del modelo da el equilibrio, que no depende de las views, y la segunda lo usa como view). El modelo Black-Litterman no admite límites de peso, así que el peso máximo solo se aplica a HRP. Universos: «Acciones y Bitcoin», «Sectores de EE. UU.», «Criptomonedas», «Portafolio actual» y, solo en HRP, «Criptomonedas y commodities» (los futuros no tienen capitalización bursátil).
 - **Explicación de los pesos:** HRP, a partir de la volatilidad anual de cada activo, su correlación promedio con el resto (de la matriz que usó HRP) y su aporte al riesgo; Black-Litterman, a partir del peso de mercado (capitalización), el retorno de equilibrio y la diferencia entre el peso final y el de mercado.
@@ -112,10 +116,15 @@ Las cuentas son **locales**: viven en la tabla `users` de la base SQLite (ver la
 - **Todo requiere sesión.** Sin iniciar sesión solo se ven la portada (`/`), `/auth/registro`, `/auth/ingresar` y los archivos estáticos. Las páginas redirigen al inicio de sesión (con `next`) y los endpoints JSON (`/api/...`) responden 401. La regla está en `web/auth/guard.py` (`PUBLIC_ENDPOINTS`, `register_access_check`).
 - **Registro e inicio de sesión:** contraseña de al menos 8 caracteres con letras y números. Tras 5 intentos fallidos en 15 minutos (por correo o por IP) el acceso se bloquea temporalmente. El mensaje de error no revela si el correo existe.
 - **Roles:** `novato` (por defecto), `inversionista` y `gestor`. `gestor` no se puede elegir: se otorga solo con `flask users make-gestor` (ver «Quién es gestor»). Qué ve cada rol: «Uso: flujo de pantallas y roles».
-- **Perfil de riesgo obligatorio:** tras el primer inicio de sesión cada usuario responde una sola vez el cuestionario de `config/cuestionario.yaml` (capital disponible en COP, horizonte, 5 preguntas de tolerancia, 3 de capacidad y 2 de conocimiento). Sin perfil vigente ninguna herramienta abre: el access check `require_current_profile` (`web/profile/access.py`) redirige al cuestionario (los `/api/...` responden 403); solo quedan libres la portada, el propio perfilado, cerrar sesión y los estáticos. El progreso se guarda en cada paso (`perfil_borradores`) y se retoma en el siguiente ingreso. En los ingresos siguientes el perfil guardado se carga en `session["perfil"]` (y en la variable de plantilla `current_profile`) y la app va directo al inicio.
-  - **Cálculo** (`src/optimizacion_portafolios/profiling/`, sin Flask): cada respuesta vale 1 a 4 según su orden; tolerancia y capacidad se promedian (menos de 2,0 adverso; de 2,0 a menos de 3,0 moderado; 3,0 o más arriesgado). El horizonte pone un tope (menos de 1 año: máximo adverso; 1 a 3 años: máximo moderado; más de 3: sin tope). Perfil final = el más bajo de los tres. Responder «Vendo todo» (pregunta 1) o «Menos de 1» mes de fondo de emergencia (pregunta 6) fuerza adverso. El **factor limitante** es el veto si lo hay; si no, el primero de `veto > horizonte > capacidad > tolerancia` cuyo nivel coincide con el final (el horizonte solo cuenta cuando impone tope). Las preguntas de conocimiento solo sugieren el rol: `inversionista` si la experiencia es «Fondos o acciones» o más y se acierta qué es diversificar; si no, `novato`. Umbrales, vetos, topes, desempate, regla del rol y explicaciones están en el YAML (con `version`), que se valida al arrancar.
-  - **Rol:** el usuario confirma (o cambia) el rol sugerido entre `novato` e `inversionista`; hasta confirmarlo las herramientas lo llevan a esa pantalla. A un `gestor` no se le pide confirmar ni se le cambia el rol.
-  - **Mi perfil** (`/perfil/`, en el menú de usuario): perfil final, factor limitante con su explicación, fecha e historial. Repetir el cuestionario agrega una fila nueva en `perfiles` y deja solo esa como vigente; las anteriores se conservan.
+- **Aviso de datos:** el texto vive en `config/avisos.yaml` (borrador pendiente de revisión legal, Ley 1581 de 2012) y se valida al arrancar. La aceptación queda en `users` (`datos_aceptados_at`, `datos_aviso_version`); si sube `version`, se vuelve a pedir en el próximo ingreso. Sin aceptarlo no abre ninguna página con sesión; quien ya estaba registrado conserva su perfil. El texto sigue pendiente de revisión legal.
+- **Perfil de riesgo obligatorio:** tras la introducción cada usuario responde una sola vez las 8 preguntas de `config/cuestionario.yaml` (versión 2), en tres pasos. Sin perfil vigente ninguna herramienta abre: el access check `require_current_profile` (`web/profile/access.py`) redirige al cuestionario (los `/api/...` responden 403); solo quedan libres la portada, el propio perfilado, cerrar sesión y los estáticos. El progreso se guarda en cada paso (`perfil_borradores`) y se retoma en el siguiente ingreso. En los ingresos siguientes el perfil guardado se carga en `session["perfil"]` (y en la variable de plantilla `current_profile`) y la app va directo al inicio.
+  - **Cálculo** (`src/optimizacion_portafolios/profiling/`, sin Flask): el puntaje suma 3 preguntas (cuándo necesita el dinero, qué quiere lograr y qué haría ante una caída), con 0 a 3 puntos cada una: de 0 a 3 conservador (id `adverso`), de 4 a 6 moderado y de 7 a 9 arriesgado. Dos reglas pasan por encima del puntaje y ninguna bloquea herramientas: necesitar el dinero en menos de 1 año y no tener un fondo de emergencia completo dejan el perfil en conservador. El capital nunca limita el perfil ni el acceso: su nivel (bajo, medio o alto, en el YAML) solo decide qué instrumentos se muestran. El rol se asigna al guardar el perfil: quien ya invierte recibe `inversionista` y quien no, `novato`. Al gestor no se le cambia. Los perfiles de la versión 1 se conservan y siguen mostrando sus textos (`legado` en el YAML); los borradores anteriores se descartan.
+  - **Categoría** (`categorias` en el YAML): sale del perfil final y de si ya invierte. Empieza de cero: conservador y moderado son Inicial, arriesgado es Intermedio. Ya invierte: conservador es Intermedio, moderado y arriesgado son Avanzado. El capital no cambia la categoría.
+  - **HRP:** se habilita desde US$1.000 (`optimizacion.umbral_usd` en `config/instrumentos.yaml`), comparando el capital escrito en pesos con la TRM del día (`data/trm.py`, con Yahoo Finance como respaldo). Por debajo, la página explica por qué y cuánto falta: optimizar implica comprar varios activos y cada compra tiene un costo. Sin dato del dólar no se detiene a nadie. Con acceso, cualquiera puede elegir sus activos, fijar portafolios y copiar uno del gestor; quien ya invierte además limita el peso máximo. Sin fondo de emergencia completo, HRP no se destaca en el recorrido, pero sigue en el menú. No aplica al gestor.
+  - **Opciones para tu perfil** (`/guia/opciones`): ejemplos educativos de `config/instrumentos.yaml`, con fuente y fecha, filtrados por categoría y capital. Sin fondo de emergencia completo solo aparecen los de riesgo bajo. No se publican tasas.
+  - **Mi perfil** (`/perfil/`, en el menú de usuario): nombre, correo, perfil de inversionista y categoría; el detalle del perfil vigente se abre si la persona quiere verlo. Repetir el cuestionario agrega una fila nueva en `perfiles` y deja solo esa como vigente.
+- **Guía de Interactive Brokers** (`/guia/interactive-brokers`, los tres roles): contenido en `config/guia_ibkr.yaml`, validado al arrancar, con su fecha de verificación, fuentes y lo que sigue por confirmar. El capital cambia el mensaje, nunca el acceso. Quien responde que ya tiene cuenta en Interactive Brokers no ve los pasos de apertura. `referido_ibkr: false` indica que no hay acuerdo: mientras sea así no se muestra ninguna comisión; con `true` aparece un aviso visible.
+- **Administración del gestor** (en `/portafolios/`, solo gestor): renombrar, liquidar (deja de seguirse y conserva el historial), eliminar (definitivo; pide escribir el nombre) y elegir qué portafolios se muestran. Los demás usuarios los ven en un desplegable del inicio (nombre, rendimiento con la última valoración guardada, activos y fecha) y pueden abrir un panel de solo lectura (`/portafolios/gestor/<id>`), con precios del día y hasta el semáforo. Quien tiene la optimización habilitada puede establecer una copia, independiente del original, con sus pesos actuales y confirmando que es educativa.
 - **Registro de decisiones** (`/historial`, «Mi historial» en el menú de usuario, todos los roles): cada vez que se genera un portafolio (HRP o Black-Litterman calculado con éxito, en su página o en la comparación, una fila por método) y cada vez que se fija uno, se inserta una fila en la tabla `registro_decisiones` con el usuario, la fecha, el perfil vigente (`perfil_id` y `perfil_final`), el rol, el método, el origen (`hrp`, `black_litterman`, `comparar` o `fijar`), los activos y pesos (JSON) y los parámetros de entrada (universo, fechas, benchmark, límites, objetivo, tasa, views). Es un historial verificable: la app solo inserta y lee (`storage/decisions.py`); el modelo rechaza cualquier actualización o borrado desde el ORM. Descargar el informe QuantStats no cuenta como decisión.
 - **Historial de backtests:** cada backtest HRP se guarda una vez por combinación de activos, periodo y parámetros (`/cuenta/backtests`, solo gestor), en la base local.
 - **Migrar portafolios de las antiguas cuentas de InsForge:** registra la cuenta local y ejecuta `flask --app wsgi:app users reassign-portfolios <id_insforge> <correo>`.
@@ -155,7 +164,7 @@ Los portafolios fijados como óptimos, sus versiones, posiciones y operaciones s
 
   El comando termina con código 1 si algún portafolio falla (el resto se guarda igual).
 
-  **Programarlo en Windows (Programador de tareas):** abre «Programador de tareas» → «Crear tarea básica…», nombre `Atlas snapshot`, desencadenador «Diariamente» a las 18:30 (después del cierre de EE. UU.), acción «Iniciar un programa» con:
+  **Programarlo en Windows (Programador de tareas):** abre «Programador de tareas» → «Crear tarea básica…», nombre `Ancor Capital snapshot`, desencadenador «Diariamente» a las 18:30 (después del cierre de EE. UU.), acción «Iniciar un programa» con:
 
   - Programa: `powershell.exe`
   - Argumentos: `-NoProfile -Command "uv run flask --app wsgi:app portfolios snapshot *>> instance\snapshot.log"`
@@ -167,7 +176,7 @@ Los portafolios fijados como óptimos, sus versiones, posiciones y operaciones s
   $action = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory (Get-Location) `
     -Argument '-NoProfile -Command "uv run flask --app wsgi:app portfolios snapshot *>> instance\snapshot.log"'
   $trigger = New-ScheduledTaskTrigger -Daily -At 6:30pm
-  Register-ScheduledTask -TaskName "Atlas snapshot" -Action $action -Trigger $trigger
+  Register-ScheduledTask -TaskName "Ancor Capital snapshot" -Action $action -Trigger $trigger
   ```
 
 - **Alertas** (`analytics/alerts.py`): reglas por portafolio con semáforo verde/amarillo/rojo, editables al fijar el portafolio y en `/portafolios/<id>/alertas`. Un nivel se alcanza cuando el valor supera estrictamente su umbral:
@@ -270,6 +279,9 @@ data       →  catálogos de activos y acceso a Tiingo/Yahoo Finance
 ```text
 wsgi.py                         punto de entrada WSGI (Flask CLI y Waitress)
 config/cuestionario.yaml        preguntas, opciones, umbrales, vetos y reglas del perfil de riesgo
+config/avisos.yaml              aviso de tratamiento de datos y aviso legal
+config/guia_ibkr.yaml           contenido de la guía de Interactive Brokers
+config/instrumentos.yaml        opciones por categoría y pasos de «Tu recorrido»
 tests/
   support.py                    precios sintéticos y cliente Flask con CSRF
   test_market_data.py           capa data
@@ -317,6 +329,8 @@ src/optimizacion_portafolios/
     black_litterman/            optimización Black-Litterman
     auth/                       cuentas locales: registro, sesión (Flask-Login), roles y permisos por rol, guardia global, límite de intentos
     profile/                    perfil de riesgo: cuestionario por pasos, resultado, confirmación de rol, Mi perfil
+    onboarding/                 aviso de tratamiento de datos e introducción
+    guia/                       guía de Interactive Brokers, opciones para tu perfil y «Tu recorrido»
     account/                    historial de backtests HRP
     portfolios/                 Mis portafolios: seguimiento de portafolios óptimos
   profiling/                    cuestionario de perfilado (carga y validación del YAML) y cálculo del perfil (sin Flask)

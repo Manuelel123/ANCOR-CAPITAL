@@ -1,0 +1,150 @@
+# Opciones para cada categoría del diagnóstico y recorrido que ve el usuario
+# (lo lee optimizacion_portafolios.web.guia). Las categorías y su matriz están en
+# config/cuestionario.yaml.
+#
+# Son ejemplos educativos, no una recomendación. No se publican tasas porque
+# cambian seguido. Los montos vienen de fuentes de terceros: actualiza
+# `verificado` cada vez que los revises.
+
+verificado: '2026-11-04'
+nota: Son ejemplos educativos y pueden cambiar. Verifica montos y condiciones con la entidad.
+
+# La optimización de portafolios se habilita desde este capital, al dólar del día.
+# Referencia: 4 compras en Trii cuestan cerca de 1,8 % de US$1.000; en Interactive
+# Brokers, cerca de 0,4 %, sin contar el giro al exterior.
+optimizacion:
+  umbral_usd: 1000
+  titulo: ¿Por qué se necesitan US${usd}?
+  motivo: >-
+    Un portafolio óptimo parte de diversificar: repartir tu dinero entre varios
+    activos para que la caída de uno no afecte todo. Por eso hay que comprar varios,
+    y cada compra tiene un costo. Con poco capital, esos costos pueden ser una parte
+    alta de tu inversión.
+  habilitada_desde: Esta herramienta se habilita desde US${usd} (hoy {cop}, según la {fuente} del {fecha}).
+  nota_activos: Con montos cercanos a US$1.000, un portafolio de 4 a 6 activos suele costar menos que uno grande.
+
+fondo_incompleto: >-
+  Mientras completas tu fondo de emergencia, ves solo opciones de riesgo bajo, monto
+  bajo y liquidez. Puedes seguir usando todas las herramientas.
+
+pasos:
+  glosario:
+    titulo: Entiende lo básico
+    descripcion: Qué es diversificar, qué es la volatilidad y otras ideas clave, en lenguaje simple.
+    destino: main.glossary
+  opciones:
+    titulo: Mira las opciones para tu perfil
+    descripcion: Ejemplos de instrumentos según tu perfil y tu capital.
+    destino: guia.options
+  guia:
+    titulo: Conoce cómo abrir una cuenta en un broker
+    descripcion: El broker de referencia, paso a paso.
+    destino: guia.interactive_brokers
+  guia_cuenta:
+    titulo: Sigue con tu cuenta de Interactive Brokers
+    descripcion: Tu primera compra y lo que debes hacer después.
+    destino: guia.interactive_brokers
+  hrp_guiado:
+    titulo: Arma un ejemplo guiado con HRP
+    descripcion: Ancor Capital te acompaña y te explica por qué cada activo pesa lo que pesa.
+    destino: hrp.hrp
+  hrp_bloqueado:
+    titulo: Conoce qué te falta para optimizar tu portafolio
+    descripcion: La optimización se habilita desde US$1.000; aquí ves por qué.
+    destino: hrp.hrp
+  hrp_libre:
+    titulo: Construye tu portafolio con HRP
+    descripcion: Ya inviertes, así que puedes ajustar el peso máximo y excluir activos.
+    destino: hrp.hrp
+
+# Pautas generales de cada categoría: sin nombrar activos ni entidades.
+pautas_titulo: Pautas generales
+pautas:
+  inicial:
+    - Primero arma tu fondo de emergencia.
+    - Invierte solo dinero que no vayas a necesitar pronto.
+    - Empieza con poco y entiende cada opción antes de dar el siguiente paso.
+  intermedio:
+    - Reparte tu dinero entre varios tipos de activos.
+    - Revisa los costos antes de cada compra.
+    - Define por cuánto tiempo vas a invertir.
+  avanzado:
+    - Evita concentrar mucho dinero en un solo activo.
+    - Revisa tu portafolio con una frecuencia fija, no por cada noticia.
+    - Ten en cuenta costos e impuestos antes de rebalancear.
+
+# Pasos de cada categoría; HRP se agrega según si la persona ya invierte y su capital.
+recorrido:
+  inicial: [glosario, opciones]
+  intermedio: [opciones, guia]
+  avanzado: [guia, opciones]
+
+instrumentos:
+  - id: cuenta_ahorros
+    nombre: Cuenta de ahorros de alto rendimiento
+    ejemplos: Pibank, Nu
+    desde: Sin monto mínimo
+    que_es: Una cuenta para guardar tu dinero con rendimiento y tenerlo disponible.
+    riesgo: Bajo
+    liquidez: Disponible cuando lo necesites
+    riesgo_bajo: true
+    categorias: [inicial]
+    capital: [bajo, medio, alto]
+    fuente:
+      titulo: Cuentas de ahorro más rentables, FinanzasPlus
+      url: https://finanzasplus.co/comparar/cuentas-ahorro/pibank
+  - id: cdt_digital
+    nombre: CDT digital
+    ejemplos: Nu, Banco de Bogotá
+    desde: Desde $50.000 a $100.000
+    que_es: Prestas tu dinero a una entidad por un plazo fijo a cambio de una tasa pactada.
+    riesgo: Bajo
+    liquidez: Plazo fijo; normalmente no se retira antes del vencimiento
+    riesgo_bajo: true
+    categorias: [inicial]
+    capital: [bajo, medio, alto]
+    fuente:
+      titulo: Mejores CDT, Rankia
+      url: https://www.rankia.co/blog/mejores-cdts/1866633-mejores-cdt
+  - id: fic_bajo_monto
+    nombre: Fondo de inversión colectiva (FIC) de bajo monto
+    ejemplos: FIC600 de Fiduagraria, Fiducuenta de Bancolombia
+    desde: Desde $1.000 a $50.000
+    que_es: Tu dinero se junta con el de otras personas y lo administra una entidad. Puede bajar de valor.
+    riesgo: Bajo a medio
+    liquidez: Depende de cada fondo; revisa su plazo de retiro
+    advertencia: Los FIC no tienen el seguro de depósitos de Fogafín.
+    riesgo_bajo: false
+    categorias: [inicial, intermedio]
+    capital: [bajo, medio, alto]
+    fuente:
+      titulo: Mejores fondos de inversión colectiva, Rankia
+      url: https://www.rankia.co/blog/fondos-inversion-colectiva-colombia/3143083-mejores-fondos-inversion-colectiva
+  - id: etf_colombia
+    nombre: ETF desde Colombia
+    ejemplos: Trii
+    desde: Por confirmar; las fuentes no coinciden
+    que_es: Un fondo que se compra como una acción y agrupa muchos activos.
+    riesgo: Medio a alto
+    liquidez: Se vende en bolsa, al precio del momento
+    advertencia: La tarifa de referencia es de $14.875 por operación; con montos pequeños pesa más.
+    riesgo_bajo: false
+    categorias: [intermedio, avanzado]
+    capital: [medio, alto]
+    fuente:
+      titulo: Trii, cómo funciona y tarifas, Rankia
+      url: https://www.rankia.co/blog/analisis-colcap/5030934-trii-review-como-funciona-app-inversion-minima-tarifas
+  - id: broker_internacional
+    nombre: Broker internacional
+    ejemplos: Interactive Brokers
+    desde: Sin depósito mínimo; poco útil por debajo de unos US$100 al mes
+    que_es: Una cuenta para comprar acciones y ETF de otros mercados.
+    riesgo: Según lo que compres
+    liquidez: Se vende en bolsa; traer el dinero tarda días
+    riesgo_bajo: false
+    apertura_ibkr: true  # no se muestra a quien ya tiene esa cuenta
+    categorias: [intermedio, avanzado]
+    capital: [medio, alto]
+    fuente:
+      titulo: Interactive Brokers en Colombia, FinanzasPlus
+      url: https://finanzasplus.co/blog/interactive-brokers-colombia-guia-completa

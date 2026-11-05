@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from flask import request
 from flask_migrate import downgrade, upgrade
+from sqlalchemy import text
 
 from optimizacion_portafolios.storage import MIGRATIONS_DIRECTORY, db
 from optimizacion_portafolios.storage.models import (
@@ -89,7 +90,8 @@ class MigrationLoggingTests(unittest.TestCase):
 
 class GestorPortfolioMigrationTests(unittest.TestCase):
     PREVIOUS = "b8938e7ff6a1"
-    NAME = "HRP · 16 activos · 2026-11-01"
+    TARGET = "c7d1e9f3a2b4"
+    NAME = "PCM: Portafolio Gestor 3"  # renamed by a later migration
 
     def _migrate(self, roles):
         """Portfolios after the migration, with one user per role in ``roles``."""
@@ -99,15 +101,25 @@ class GestorPortfolioMigrationTests(unittest.TestCase):
             with app.app_context():
                 db.drop_all()
                 upgrade(directory=MIGRATIONS_DIRECTORY, revision=self.PREVIOUS)
+                # Plain SQL: the model may already have columns of later migrations.
                 for index, role in enumerate(roles):
-                    db.session.add(User(email=f"{index}@test.local", password_hash="x", role=role))
+                    db.session.execute(
+                        text(
+                            "INSERT INTO users (email, password_hash, role, role_confirmed, plan, created_at)"
+                            " VALUES (:email, 'x', :role, false, 'free', CURRENT_TIMESTAMP)"
+                        ),
+                        {"email": f"{index}@test.local", "role": role},
+                    )
                 db.session.commit()
-                upgrade(directory=MIGRATIONS_DIRECTORY)
-                result = self._summary()
+                upgrade(directory=MIGRATIONS_DIRECTORY, revision=self.TARGET)
                 # Running it again must not duplicate the portfolio.
                 downgrade(directory=MIGRATIONS_DIRECTORY, revision=self.PREVIOUS)
+                upgrade(directory=MIGRATIONS_DIRECTORY, revision=self.TARGET)
+                after_rerun = db.session.execute(text("SELECT count(*) FROM portfolios")).scalar()
+                db.session.remove()
                 upgrade(directory=MIGRATIONS_DIRECTORY)
-                result["after_rerun"] = Portfolio.query.count()
+                result = self._summary()
+                result["after_rerun"] = after_rerun
                 db.session.remove()
                 db.engine.dispose()
         return result
@@ -149,6 +161,40 @@ class GestorPortfolioMigrationTests(unittest.TestCase):
                 result = self._migrate(roles)
                 self.assertEqual(result["portfolios"], 0)
                 self.assertEqual(result["after_rerun"], 0)
+
+
+class GestorPortfolioNamesMigrationTests(unittest.TestCase):
+    PREVIOUS = "d4e8f1a6c3b7"
+
+    def test_the_three_portfolios_get_their_name_and_show(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            uri = "sqlite:///" + os.path.join(folder, "atlas.db")
+            app = create_app({"TESTING": True, "SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": uri})
+            with app.app_context():
+                db.drop_all()
+                upgrade(directory=MIGRATIONS_DIRECTORY, revision=self.PREVIOUS)
+                db.session.execute(text(
+                    "INSERT INTO users (email, password_hash, role, role_confirmed, plan, created_at)"
+                    " VALUES ('g@test.local', 'x', 'gestor', true, 'free', CURRENT_TIMESTAMP)"
+                ))
+                user_id = db.session.execute(text("SELECT id FROM users")).scalar()
+                for name in ("Portafolio 1", "HRP · 4 activos · 2026-10-20", "HRP · 6 activos · 2026-10-22"):
+                    db.session.execute(text(
+                        "INSERT INTO portfolios (user_id, name, model, benchmark, initial_capital, commission_bps,"
+                        " status, tracking_start, created_at) VALUES (:user, :name, 'hrp', 'SPY', 1, 10, 'active',"
+                        " '2026-10-01', CURRENT_TIMESTAMP)"
+                    ), {"user": str(user_id), "name": name})
+                db.session.commit()
+                db.session.remove()
+                upgrade(directory=MIGRATIONS_DIRECTORY)
+                rows = dict(db.session.execute(text("SELECT name, visible_usuarios FROM portfolios")).all())
+                db.session.remove()
+                db.engine.dispose()
+        self.assertEqual(rows, {
+            "PAVF: Portafolio Gestor 1": 1,
+            "HRP · 4 activos · 2026-10-20": 0,
+            "PID: Portafolio Gestor 2": 1,
+        })
 
 
 if __name__ == "__main__":

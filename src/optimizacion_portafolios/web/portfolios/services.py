@@ -23,7 +23,7 @@ from optimizacion_portafolios.data.catalogs import BENCHMARKS
 from optimizacion_portafolios.data.fx import prices_in_usd
 from optimizacion_portafolios.data.market_data import DOWNLOAD_ERRORS, download_prices
 from optimizacion_portafolios.storage import repositories
-from optimizacion_portafolios.storage.models import Portfolio
+from optimizacion_portafolios.storage.models import DailySnapshot, Portfolio
 from optimizacion_portafolios.storage.repositories import HoldingData, TransactionData
 from optimizacion_portafolios.web.common.charts import (
     contribution_chart,
@@ -34,7 +34,7 @@ from optimizacion_portafolios.web.common.charts import (
     weights_vs_target_chart,
 )
 from optimizacion_portafolios.web.portfolios import alerting
-from optimizacion_portafolios.web.portfolios.snapshots import MODEL_LABELS, default_name
+from optimizacion_portafolios.web.portfolios.snapshots import MODEL_LABELS, copied_from, default_name
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,7 @@ def fix_form(snapshot: dict) -> dict:
         "benchmark": snapshot.get("benchmark") or "SPY",
         "benchmarks": benchmark_options(snapshot.get("benchmark") or ""),
         "weights": sorted(weights.items(), key=lambda item: -item[1]),
+        "copied_from": copied_from(snapshot),
     }
 
 
@@ -169,12 +170,34 @@ def _summary(portfolio: Portfolio) -> dict:
         "version_number": version.number if version else 0,
         "asset_count": len(version.holdings) if version else 0,
         "tickers": [holding.ticker for holding in version.holdings] if version else [],
+        "visible": portfolio.visible_usuarios,
     }
 
 
 def portfolio_header(portfolio: Portfolio) -> dict:
     """Summary for sub-pages (alerts, management, versions)."""
     return _summary(portfolio)
+
+
+def public_summary(portfolio: Portfolio) -> dict:
+    """Card of a gestor's portfolio on the home page; its panel has the rest.
+
+    Uses the last stored valuation, so the home page never downloads prices.
+    """
+    version = portfolio.current_version
+    # order_by(None): the relationship already sorts by day, oldest first.
+    last = portfolio.snapshots.order_by(None).order_by(DailySnapshot.day.desc()).first()
+    return {
+        "id": portfolio.id,
+        "name": portfolio.name,
+        "tracking_start": portfolio.tracking_start.isoformat(),
+        "asset_count": len(version.holdings) if version else 0,
+        "total_return": last.value / portfolio.initial_capital - 1 if last else None,
+    }
+
+
+def public_portfolios() -> list[dict]:
+    return [public_summary(portfolio) for portfolio in repositories.visible_gestor_portfolios()]
 
 
 def portfolio_list(user_id: str) -> list[dict]:

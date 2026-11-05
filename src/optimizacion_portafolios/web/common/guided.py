@@ -19,6 +19,7 @@ from optimizacion_portafolios.data.catalogs import (
     ACTIVOS,
     BENCHMARKS,
     COMMODITIES,
+    ACTIVOS_HRP,
     CRIPTOMONEDAS,
     INDICES,
     PORTAFOLIO_IMAGEN,
@@ -32,9 +33,12 @@ GUIDED_UNIVERSES: dict[str, dict[str, str]] = {
     "Criptomonedas": CRIPTOMONEDAS,
     "Portafolio actual": PORTAFOLIO_IMAGEN,
 }
+OWN_UNIVERSE = "Elige tus activos"
+OWN_UNIVERSE_MAX_ASSETS = 20
 GUIDED_HRP_UNIVERSES: dict[str, dict[str, str]] = {
     **GUIDED_UNIVERSES,
     "Criptomonedas y commodities": {**CRIPTOMONEDAS, **COMMODITIES},
+    OWN_UNIVERSE: ACTIVOS_HRP,
 }
 UNIVERSE_DESCRIPTIONS = {
     "Acciones y Bitcoin": "Tres grandes tecnológicas y Bitcoin: buen ejemplo de activos parecidos frente a uno muy distinto.",
@@ -42,6 +46,7 @@ UNIVERSE_DESCRIPTIONS = {
     "Criptomonedas": "Cuatro criptomonedas: muy volátiles y bastante correlacionadas entre sí.",
     "Portafolio actual": "Una mezcla de sectores, acciones, oro y fintech (19 activos).",
     "Criptomonedas y commodities": "Criptomonedas junto a oro, plata, petróleo, gas y cobre.",
+    OWN_UNIVERSE: f"Arma tu propio portafolio: elige de 2 a {OWN_UNIVERSE_MAX_ASSETS} activos y HRP calcula los pesos.",
 }
 GUIDED_DEFAULT_UNIVERSE = "Acciones y Bitcoin"
 
@@ -78,11 +83,16 @@ def guided_selection(universes: dict, default_universe: str = GUIDED_DEFAULT_UNI
             flash("Selecciona uno de los universos disponibles.", "error")
         universe_name = default_universe
     available = list(dict.fromkeys(universes[universe_name].values()))
-    selected = available
+    selected = default_universe_selection(universe_name, available)
     if request.method == "POST" and can("exclude_assets") and request.form.get("action") != "refresh":
         checked = set(request.form.getlist("tickers"))
         selected = [ticker for ticker in available if ticker in checked]
     return universe_name, available, selected
+
+
+def default_universe_selection(universe_name: str, tickers: list[str]) -> list[str]:
+    """Every asset is checked, except where the user builds the portfolio."""
+    return [] if universe_name == OWN_UNIVERSE else tickers
 
 
 def guided_max_weight() -> float:
@@ -263,7 +273,7 @@ GLOSSARY: dict[str, str] = {
     "View": "Una opinión sobre el retorno anual de un activo. Black-Litterman la mezcla con el equilibrio según la confianza que tenga.",
     "HRP (Hierarchical Risk Parity)": "Método que agrupa los activos por su correlación y reparte el capital para equilibrar el riesgo de cada grupo, sin predecir retornos.",
     "Black-Litterman": "Método que parte del equilibrio de mercado, lo ajusta con views y busca el mejor portafolio para un objetivo (aquí, máximo Sharpe).",
-    "Perfil de riesgo": "Tu disposición y capacidad para asumir pérdidas, según el cuestionario de Atlas.",
+    "Perfil de riesgo": "Tu disposición y capacidad para asumir pérdidas, según el cuestionario de Ancor Capital.",
     "Horizonte": "El tiempo que piensas mantener la inversión. Horizontes cortos dejan menos tiempo para recuperarse de una caída.",
 }
 GUIDED_TERMS = (
@@ -276,8 +286,9 @@ GUIDED_TERMS = (
     "Rebalanceo",
     "Benchmark",
     "HRP (Hierarchical Risk Parity)",
-    "Black-Litterman",
 )
+# Only the gestor has Black-Litterman; nobody else needs these terms.
+GESTOR_TERMS = frozenset({"Capitalización bursátil", "Equilibrio de mercado", "View", "Black-Litterman"})
 
 
 def glossary(terms=None) -> list[tuple[str, str]]:

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "profile/_macros.html" import radio_group %}
+{% from "profile/_macros.html" import amount_field, radio_group %}
 {% block title %}Perfil de riesgo{% endblock %}
 {% block content %}
   <header class="page-header">
@@ -29,7 +29,11 @@
     <input type="hidden" name="paso" value="{{ step }}">
     <div class="card__body form-stack">
       {% for field in fields %}
-        {{ radio_group(field.name, field.legend, field.options, field.selected, field.name in missing, field.help) }}
+        {% if field.amount %}
+          {{ amount_field(field.name, field.legend, field.selected, field.name in missing, field.help) }}
+        {% else %}
+          {{ radio_group(field.name, field.legend, field.options, field.selected, field.name in missing, field.help) }}
+        {% endif %}
       {% endfor %}
     </div>
     <div class="card__footer">

@@ -1,4 +1,4 @@
-# UX de formularios, resultados y arquitectura de gráficos — Atlas
+# UX de formularios, resultados y arquitectura de gráficos — Ancor Capital
 
 > Decisiones del orquestador que PREVALECEN sobre este documento y sobre docs/diseno_visual.md:
 > - Colores: SIEMPRE los tokens/paleta de docs/diseno_visual.md (índigo + paleta categórica validada). Ignora cualquier mención a navy, dorado, PRIMARY_COLOR/ACCENT_COLOR antiguos o #a23b3b. Gráfico de asignación: barras en serie slot 1 (#2a78d6 claro / #3987e5 oscuro); negativos en --negative-chart; marcador de peso de mercado/referencias en --text-3/--text-1 discontinuo.

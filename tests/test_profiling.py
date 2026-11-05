@@ -1,4 +1,4 @@
-"""Risk-profile questionnaire: YAML loading/validation, scores, final profile, vetoes and role."""
+"""Risk-profile questionnaire: YAML loading/validation, score, overrides and role."""
 
 import copy
 import tempfile
@@ -12,60 +12,69 @@ from optimizacion_portafolios.profiling import (
     DEFAULT_PATH,
     AnswerError,
     QuestionnaireError,
-    block_score,
+    category_for,
+    emergency_fund_complete,
     evaluate,
     explain,
+    has_ibkr_account,
     level_for_score,
     load_questionnaire,
     parse_questionnaire,
+    risk_score,
     suggest_role,
 )
 
 QUESTIONNAIRE = load_questionnaire()
 RAW = yaml.safe_load(DEFAULT_PATH.read_text(encoding="utf-8"))
-
-# Answers that put each scored block at a given level without triggering a veto
-# (p1 = 1 "Vendo todo" and p6 = 1 "Menos de 1" are vetoes).
-TOLERANCE = {
-    "adverso": {"p1": 2, "p2": 1, "p3": 1, "p4": 1, "p5": 1},  # 1.2
-    "moderado": {"p1": 2, "p2": 2, "p3": 2, "p4": 2, "p5": 2},  # 2.0
-    "arriesgado": {"p1": 4, "p2": 4, "p3": 3, "p4": 3, "p5": 3},  # 3.4
-}
-CAPACITY = {
-    "adverso": {"p6": 2, "p7": 1, "p8": 1},  # 1.33
-    "moderado": {"p6": 2, "p7": 3, "p8": 3},  # 2.67
-    "arriesgado": {"p6": 4, "p7": 3, "p8": 2},  # 3.0
-}
-KNOWLEDGE = {"k1": 3, "k2": 2}
-HORIZON_CAP = {"menos_1": "adverso", "de_1_a_3": "moderado", "mas_3": "arriesgado"}
-RANK = {"adverso": 0, "moderado": 1, "arriesgado": 2}
+HORIZONS = ("menos_1", "de_1_a_3", "de_3_a_5", "mas_5")
+CAPITALS = ("menos_50k", "50k_200k", "200k_1m", "1m_5m", "5m_30m", "mas_30m")
 
 
-def answers(tolerance="moderado", capacity="moderado", **overrides):
-    return {**TOLERANCE[tolerance], **CAPACITY[capacity], **KNOWLEDGE, **overrides}
+def answers(**overrides):
+    """Complete answers with a full emergency fund (nothing overrides the score)."""
+    return {"k1": 3, "broker": 1, "aporte": 3, "p2": 2, "p1": 3, "p6": 1, **overrides}
 
 
 class QuestionnaireFileTests(unittest.TestCase):
     def test_file_content(self):
         q = QUESTIONNAIRE
-        self.assertTrue(q.version)
+        self.assertEqual(q.version, "2")
         self.assertEqual(q.level_ids, ("adverso", "moderado", "arriesgado"))
-        self.assertEqual([block.id for block in q.blocks], ["tolerancia", "capacidad", "conocimiento"])
-        self.assertEqual(q.question_ids, ("p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "k1", "k2"))
-        self.assertFalse(q.block("conocimiento").affects_profile)
-        self.assertEqual(q.question("p1").text, "Su inversión cae 20 % en tres meses. ¿Qué hace?")
-        self.assertEqual(q.question("p1").options, ("Vendo todo", "Vendo una parte", "Mantengo", "Compro más"))
-        self.assertEqual(q.question("p6").options, ("Menos de 1", "1 a 3", "3 a 6", "Más de 6"))
-        self.assertEqual(q.question("p5").options[0], '"Prefiero no arriesgar"')
-        self.assertEqual([choice.text for choice in q.horizon_options], ["Menos de 1 año", "1 a 3 años", "Más de 3 años"])
-        self.assertEqual(len(q.capital_options), 5)
+        self.assertEqual(q.level("adverso").label, "Conservador")
+        self.assertEqual([block.layout for block in q.blocks], [
+            ("k1", "broker", "capital_rango", "aporte"), ("horizonte", "p2", "p1"), ("p6",),
+        ])
+        self.assertEqual(q.question("k1").options, (
+            "Solo la gasto", "Solo ahorro (cuenta, CDT, natillera)", "Invierto en fondos",
+            "Invierto en acciones, ETF o cripto",
+        ))
+        self.assertEqual(q.question("aporte").options, (
+            "Nada", "Menos de $50.000", "$50.000 a $200.000", "$200.000 a $500.000", "Más de $500.000",
+        ))
+        self.assertEqual(q.question("p1").options, ("Vendería todo", "Vendería una parte", "Esperaría", "Invertiría más"))
+        self.assertEqual(q.question("p6").options, ("Sí", "Parcialmente", "No"))
+        self.assertEqual(len(q.question_ids), 6)
+        self.assertEqual(q.question("broker").options, ("No", "Sí, en Interactive Brokers", "Sí, en otro broker"))
+        self.assertEqual([choice.id for choice in q.capital_options], list(CAPITALS))
+        self.assertEqual([choice.id for choice in q.horizon_options], list(HORIZONS))
         self.assertEqual({(veto.question, veto.option_text) for veto in q.vetoes},
-                         {("p1", "Vendo todo"), ("p6", "Menos de 1")})
-        self.assertEqual(q.tiebreak, ("veto", "horizonte", "capacidad", "tolerancia"))
-        self.assertEqual(q.question("k2").correct, 2)
-        for block in q.blocks:
-            for question in block.questions:
-                self.assertEqual(len(question.options), 4, question.id)
+                         {("p6", "No"), ("p6", "Parcialmente")})
+        self.assertEqual(q.max_score, 9)
+
+    def test_capital_levels_live_in_the_yaml(self):
+        levels = [QUESTIONNAIRE.capital_level(choice) for choice in CAPITALS]
+        self.assertEqual(levels, ["bajo", "bajo", "bajo", "bajo", "medio", "alto"])
+
+    def test_capital_and_horizon_of_version_1_profiles_are_still_readable(self):
+        q = QUESTIONNAIRE
+        self.assertEqual(q.capital_text_of("mas_100m"), "Más de 100 millones de pesos")
+        self.assertEqual(q.horizon_text_of("mas_3"), "Más de 3 años")
+        self.assertEqual(
+            [q.capital_level(choice) for choice in ("menos_1m", "1m_5m", "5m_20m", "20m_100m", "mas_100m")],
+            ["bajo", "bajo", "medio", "medio", "alto"],
+        )
+        with self.assertRaises(AnswerError):  # but they are not valid answers
+            evaluate(q, "mas_100m", "mas_5", answers())
 
     def _broken(self, mutate):
         data = copy.deepcopy(RAW)
@@ -77,18 +86,22 @@ class QuestionnaireFileTests(unittest.TestCase):
 
     def test_invalid_files_fail_with_a_clear_message(self):
         self.assertIn("version", self._broken(lambda d: d.pop("version")))
-        self.assertIn("exactamente 4 opciones", self._broken(
-            lambda d: d["bloques"][0]["preguntas"][0]["opciones"].pop()))
-        self.assertIn("no es una opción", self._broken(lambda d: d["vetos"][0].update(opcion="Vendo casi todo")))
-        self.assertIn("desempate", self._broken(lambda d: d["factor_limitante"]["desempate"].remove("capacidad")))
+        self.assertIn("al menos 2 opciones", self._broken(
+            lambda d: d["bloques"][2]["preguntas"][0].update(opciones=["Sí"])))
+        self.assertIn("no es una opción", self._broken(lambda d: d["vetos"][0].update(opcion="Casi")))
+        self.assertIn("desempate", self._broken(lambda d: d["factor_limitante"]["desempate"].remove("horizonte")))
         self.assertIn("no es un nivel", self._broken(
             lambda d: d["datos_previos"]["horizonte"]["opciones"][0].update(nivel_maximo="extremo")))
         self.assertIn("umbrales", self._broken(lambda d: d["umbrales"].pop("arriesgado")))
-        self.assertIn("crecer", self._broken(lambda d: d["umbrales"].update(moderado=3.5)))
+        self.assertIn("crecer", self._broken(lambda d: d["umbrales"].update(moderado=8)))
+        self.assertIn("puntaje máximo", self._broken(lambda d: d["umbrales"].update(arriesgado=10)))
         self.assertIn("rol sugerible", self._broken(lambda d: d["rol_sugerido"].update(si_cumple="gestor")))
         self.assertIn("marcador", self._broken(
-            lambda d: d["factor_limitante"]["explicaciones"].update(capacidad="{desconocido}")))
-        self.assertIn("repetido", self._broken(lambda d: d["bloques"][1]["preguntas"][0].update(id="p1")))
+            lambda d: d["factor_limitante"]["explicaciones"].update(tolerancia="{desconocido}")))
+        self.assertIn("repetido", self._broken(lambda d: d["bloques"][1]["preguntas"][1].update(id="k1")))
+        self.assertIn("nivel", self._broken(lambda d: d["datos_previos"]["capital"]["opciones"][0].pop("nivel")))
+        self.assertIn("ubicar", self._broken(lambda d: d["bloques"][0]["preguntas"].pop(2)))
+        self.assertIn("puntaje.preguntas", self._broken(lambda d: d["puntaje"]["preguntas"].append("p9")))
 
     def test_missing_or_malformed_yaml(self):
         with self.assertRaises(QuestionnaireError):
@@ -102,111 +115,162 @@ class QuestionnaireFileTests(unittest.TestCase):
 
 
 class ScoreTests(unittest.TestCase):
-    def test_block_score_is_the_average_of_positions(self):
-        given = answers(p1=4, p2=3, p3=2, p4=1, p5=3)
-        self.assertEqual(float(block_score(QUESTIONNAIRE, "tolerancia", given)), 2.6)
-        self.assertAlmostEqual(float(block_score(QUESTIONNAIRE, "capacidad", answers("moderado", "adverso"))), 4 / 3)
+    def test_the_score_adds_questions_4_5_and_6_from_0_to_3(self):
+        for points in product(range(4), repeat=3):
+            horizon, goal, drop = points
+            given = answers(p2=goal + 1, p1=drop + 1)
+            self.assertEqual(risk_score(QUESTIONNAIRE, HORIZONS[horizon], given), sum(points), points)
 
     def test_thresholds(self):
-        cases = {1.0: "adverso", 1.99: "adverso", 2.0: "moderado", 2.8: "moderado", 2.99: "moderado",
-                 3.0: "arriesgado", 4.0: "arriesgado"}
+        cases = {0: "adverso", 3: "adverso", 4: "moderado", 6: "moderado", 7: "arriesgado", 9: "arriesgado"}
         for score, level in cases.items():
             self.assertEqual(level_for_score(QUESTIONNAIRE, score), level, score)
 
     def test_result_fields(self):
-        result = evaluate(QUESTIONNAIRE, "5m_20m", "mas_3", answers("arriesgado", "moderado"))
-        self.assertEqual(result.scores, {"tolerancia": 3.4, "capacidad": 8 / 3})
-        self.assertEqual(result.block_levels, {"tolerancia": "arriesgado", "capacidad": "moderado"})
-        self.assertEqual((result.final_level, result.limiting_factor), ("moderado", "capacidad"))
+        result = evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers())
+        self.assertEqual(result.scores, {"tolerancia": 6.0, "capacidad": 1.0})
+        self.assertEqual(result.block_levels, {"tolerancia": "moderado", "capacidad": "arriesgado"})
+        self.assertEqual((result.final_level, result.limiting_factor), ("moderado", "tolerancia"))
         self.assertEqual(result.horizon_level, "arriesgado")
         self.assertFalse(result.horizon_capped)
 
     def test_incomplete_or_invalid_answers(self):
         partial = answers()
-        partial.pop("p8")
+        partial.pop("aporte")
         with self.assertRaises(AnswerError):
-            evaluate(QUESTIONNAIRE, "5m_20m", "mas_3", partial)
+            evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", partial)
         with self.assertRaises(AnswerError):
-            evaluate(QUESTIONNAIRE, "5m_20m", "mas_3", answers(p2=5))
+            evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers(p2=5))
         with self.assertRaises(AnswerError):
-            evaluate(QUESTIONNAIRE, "otro", "mas_3", answers())
+            evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers(p6=4))
+        self.assertEqual(evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers(aporte=5)).answers["aporte"], 5)
         with self.assertRaises(AnswerError):
-            evaluate(QUESTIONNAIRE, "5m_20m", "nunca", answers())
+            evaluate(QUESTIONNAIRE, "otro", "mas_5", answers())
+        with self.assertRaises(AnswerError):
+            evaluate(QUESTIONNAIRE, "5m_30m", "nunca", answers())
 
 
 class FinalProfileTests(unittest.TestCase):
-    def test_final_profile_is_the_lowest_for_every_combination(self):
-        for tolerance, capacity, horizon in product(TOLERANCE, CAPACITY, HORIZON_CAP):
-            with self.subTest(tolerance=tolerance, capacity=capacity, horizon=horizon):
-                result = evaluate(QUESTIONNAIRE, "1m_5m", horizon, answers(tolerance, capacity))
-                expected = min((tolerance, capacity, HORIZON_CAP[horizon]), key=RANK.get)
-                self.assertEqual(result.final_level, expected)
-                self.assertEqual(result.block_levels, {"tolerancia": tolerance, "capacidad": capacity})
-                self.assertEqual(result.horizon_level, HORIZON_CAP[horizon])
-                # Tie-break: horizon (only when it caps) > capacity > tolerance.
-                if horizon != "mas_3" and HORIZON_CAP[horizon] == expected:
-                    factor = "horizonte"
-                elif capacity == expected:
-                    factor = "capacidad"
-                else:
-                    factor = "tolerancia"
-                self.assertEqual(result.limiting_factor, factor)
-                self.assertIsNone(result.veto)
+    RISKY = {"p2": 4, "p1": 4}
 
-    def test_horizon_caps(self):
-        risky = answers("arriesgado", "arriesgado")
-        self.assertEqual(evaluate(QUESTIONNAIRE, "mas_100m", "menos_1", risky).final_level, "adverso")
-        self.assertEqual(evaluate(QUESTIONNAIRE, "mas_100m", "de_1_a_3", risky).final_level, "moderado")
-        uncapped = evaluate(QUESTIONNAIRE, "mas_100m", "mas_3", risky)
-        # Capacity and tolerance tie at the top: capacity wins the tie-break.
-        self.assertEqual((uncapped.final_level, uncapped.limiting_factor), ("arriesgado", "capacidad"))
+    def test_less_than_a_year_is_conservative(self):
+        result = evaluate(QUESTIONNAIRE, "mas_30m", "menos_1", answers(**self.RISKY))
+        self.assertEqual(result.scores["tolerancia"], 6.0)
+        self.assertEqual((result.final_level, result.limiting_factor), ("adverso", "horizonte"))
+        self.assertIn("menos de 1 año", explain(QUESTIONNAIRE, result))
+        self.assertIn("Conservador", explain(QUESTIONNAIRE, result))
 
-    def test_vetoes_force_adverse(self):
-        risky = answers("arriesgado", "arriesgado")
-        for question, option in (("p1", 1), ("p6", 1)):
-            with self.subTest(question=question):
-                result = evaluate(QUESTIONNAIRE, "mas_100m", "mas_3", {**risky, question: option})
+    def test_longer_horizons_do_not_cap_the_profile(self):
+        for horizon in HORIZONS[1:]:
+            self.assertFalse(evaluate(QUESTIONNAIRE, "mas_30m", horizon, answers(**self.RISKY)).horizon_capped)
+        self.assertEqual(evaluate(QUESTIONNAIRE, "mas_30m", "de_1_a_3", answers(**self.RISKY)).final_level, "arriesgado")
+
+    def test_without_a_full_emergency_fund_the_profile_is_conservative(self):
+        for option in (2, 3):
+            with self.subTest(option=option):
+                result = evaluate(QUESTIONNAIRE, "mas_30m", "mas_5", answers(p6=option, **self.RISKY))
+                self.assertEqual(result.scores["tolerancia"], 9.0)
                 self.assertEqual((result.final_level, result.limiting_factor), ("adverso", "veto"))
-                self.assertEqual(result.veto.question, question)
+                self.assertEqual(result.block_levels["capacidad"], "adverso")
                 self.assertEqual(explain(QUESTIONNAIRE, result), result.veto.explanation)
-        both = evaluate(QUESTIONNAIRE, "mas_100m", "mas_3", {**risky, "p1": 1, "p6": 1})
-        self.assertEqual(len(both.vetoes), 2)
-        # A veto wins the tie-break even when another factor is also adverse.
-        short = evaluate(QUESTIONNAIRE, "mas_100m", "menos_1", {**risky, "p1": 1})
-        self.assertEqual(short.limiting_factor, "veto")
-        # "Vendo una parte" or "1 a 3" months are not vetoes.
-        self.assertIsNone(evaluate(QUESTIONNAIRE, "mas_100m", "mas_3", {**risky, "p1": 2, "p6": 2}).veto)
+        self.assertIsNone(evaluate(QUESTIONNAIRE, "mas_30m", "mas_5", answers(**self.RISKY)).veto)
 
-    def test_knowledge_does_not_change_the_profile(self):
-        base = evaluate(QUESTIONNAIRE, "1m_5m", "mas_3", answers("arriesgado", "moderado"))
-        for k1, k2 in product(range(1, 5), range(1, 5)):
-            result = evaluate(QUESTIONNAIRE, "1m_5m", "mas_3", answers("arriesgado", "moderado", k1=k1, k2=k2))
+    def test_selling_everything_is_no_longer_an_override(self):
+        result = evaluate(QUESTIONNAIRE, "mas_30m", "mas_5", answers(p2=4, p1=1))
+        self.assertEqual((result.final_level, result.limiting_factor), ("moderado", "tolerancia"))
+
+    def test_a_veto_wins_the_tie_break_over_the_horizon(self):
+        result = evaluate(QUESTIONNAIRE, "mas_30m", "menos_1", answers(p6=3))
+        self.assertEqual(result.limiting_factor, "veto")
+
+    def test_capital_contribution_and_experience_do_not_change_the_profile(self):
+        base = evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers())
+        for capital, aporte, k1 in product(CAPITALS, range(1, 6), range(1, 5)):
+            result = evaluate(QUESTIONNAIRE, capital, "mas_5", answers(aporte=aporte, k1=k1))
             self.assertEqual((result.final_level, result.limiting_factor, result.scores),
                              (base.final_level, base.limiting_factor, base.scores))
 
     def test_explanations_are_plain_language(self):
-        horizon = evaluate(QUESTIONNAIRE, "1m_5m", "menos_1", answers("arriesgado", "arriesgado"))
-        self.assertIn("menos de 1 año", explain(QUESTIONNAIRE, horizon))
-        self.assertIn("Adverso al riesgo", explain(QUESTIONNAIRE, horizon))
-        capacity = evaluate(QUESTIONNAIRE, "1m_5m", "mas_3", answers("arriesgado", "adverso"))
-        self.assertIn("1,33 de 4", explain(QUESTIONNAIRE, capacity))
-        tolerance = evaluate(QUESTIONNAIRE, "1m_5m", "mas_3", answers("adverso", "arriesgado"))
-        self.assertIn("tolerancia al riesgo (promedio 1,20 de 4)", explain(QUESTIONNAIRE, tolerance))
+        result = evaluate(QUESTIONNAIRE, "1m_5m", "mas_5", answers())
+        self.assertIn("6 de 9", explain(QUESTIONNAIRE, result))
+        self.assertIn("«Moderado»", explain(QUESTIONNAIRE, result))
+
+
+class CapitalAmountTests(unittest.TestCase):
+    def test_an_amount_falls_in_its_range(self):
+        cases = {1: "menos_50k", 49999: "menos_50k", 50000: "50k_200k", 999999: "200k_1m", 1000000: "1m_5m",
+                 5000000: "5m_30m", 30000000: "mas_30m", 900000000: "mas_30m"}
+        for amount, choice in cases.items():
+            self.assertEqual(QUESTIONNAIRE.capital_range_for(amount), choice, amount)
+
+    def test_bounds_include_earlier_versions(self):
+        self.assertEqual(QUESTIONNAIRE.capital_bounds("1m_5m"), (1000000, 5000000))
+        self.assertEqual(QUESTIONNAIRE.capital_bounds("mas_30m"), (30000000, None))
+        self.assertEqual(QUESTIONNAIRE.capital_bounds("20m_100m"), (20000000, 100000000))
+
+    def test_ranges_must_grow(self):
+        data = copy.deepcopy(RAW)
+        data["datos_previos"]["capital"]["opciones"][2]["desde"] = 1
+        with self.assertRaisesRegex(QuestionnaireError, "deben crecer"):
+            parse_questionnaire(data, source="prueba.yaml")
+
+
+class CategoryTests(unittest.TestCase):
+    def test_the_matrix(self):
+        expected = {
+            (1, "adverso"): "inicial", (1, "moderado"): "inicial", (1, "arriesgado"): "intermedio",
+            (2, "adverso"): "inicial", (2, "moderado"): "inicial", (2, "arriesgado"): "intermedio",
+            (3, "adverso"): "intermedio", (3, "moderado"): "avanzado", (3, "arriesgado"): "avanzado",
+            (4, "adverso"): "intermedio", (4, "moderado"): "avanzado", (4, "arriesgado"): "avanzado",
+        }
+        for (k1, level), category in expected.items():
+            self.assertEqual(category_for(QUESTIONNAIRE, level, {"k1": k1}).id, category, (k1, level))
+
+    def test_a_version_1_profile_gets_a_category_too(self):
+        self.assertEqual(category_for(QUESTIONNAIRE, "moderado", {"k1": 3, "k2": 2}).id, "avanzado")
+        self.assertEqual(category_for(QUESTIONNAIRE, "moderado", {}).id, "inicial")
+
+    def test_emergency_fund(self):
+        version = QUESTIONNAIRE.version
+        self.assertTrue(emergency_fund_complete(QUESTIONNAIRE, version, {"p6": 1}))
+        self.assertFalse(emergency_fund_complete(QUESTIONNAIRE, version, {"p6": 2}))
+        self.assertFalse(emergency_fund_complete(QUESTIONNAIRE, version, {"p6": 3}))
+        # Version 1 asked for months: "Menos de 1", "1 a 3", "3 a 6", "Más de 6".
+        self.assertFalse(emergency_fund_complete(QUESTIONNAIRE, "1", {"p6": 2}))
+        self.assertTrue(emergency_fund_complete(QUESTIONNAIRE, "1", {"p6": 3}))
+
+    def test_a_bad_matrix_fails_with_a_clear_message(self):
+        data = copy.deepcopy(RAW)
+        data["categorias"]["matriz"]["ya_invierte"]["moderado"] = "experto"
+        with self.assertRaisesRegex(QuestionnaireError, "categorias.matriz.ya_invierte.moderado"):
+            parse_questionnaire(data, source="prueba.yaml")
+
+
+class BrokerAccountTests(unittest.TestCase):
+    def test_only_interactive_brokers_counts(self):
+        cases = {1: False, 2: True, 3: False}
+        for option, expected in cases.items():
+            self.assertEqual(has_ibkr_account(QUESTIONNAIRE, {"broker": option}), expected, option)
+        self.assertFalse(has_ibkr_account(QUESTIONNAIRE, {"k1": 3}))  # earlier profiles
+
+    def test_it_does_not_change_the_profile(self):
+        base = evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers())
+        result = evaluate(QUESTIONNAIRE, "5m_30m", "mas_5", answers(broker=2))
+        self.assertEqual((result.final_level, result.scores), (base.final_level, base.scores))
+
+    def test_the_option_must_exist(self):
+        data = copy.deepcopy(RAW)
+        data["cuenta_broker"]["opcion_ibkr"] = "Sí, en otro"
+        with self.assertRaisesRegex(QuestionnaireError, "cuenta_broker"):
+            parse_questionnaire(data, source="prueba.yaml")
 
 
 class SuggestedRoleTests(unittest.TestCase):
-    def test_rule(self):
-        cases = {
-            (3, 2): "inversionista",  # funds or stocks, knows what diversifying means
-            (4, 2): "inversionista",
-            (4, 1): "novato",  # experienced but wrong answer
-            (2, 2): "novato",  # right answer, only savings/CDT
-            (1, 4): "novato",
-        }
-        for (k1, k2), role in cases.items():
-            self.assertEqual(suggest_role(QUESTIONNAIRE, {"k1": k1, "k2": k2}), role, (k1, k2))
-            result = evaluate(QUESTIONNAIRE, "1m_5m", "mas_3", answers(k1=k1, k2=k2))
-            self.assertEqual(result.suggested_role, role)
+    def test_route_b_suggests_inversionista(self):
+        cases = {1: "novato", 2: "novato", 3: "inversionista", 4: "inversionista"}
+        for k1, role in cases.items():
+            self.assertEqual(suggest_role(QUESTIONNAIRE, {"k1": k1}), role, k1)
+            self.assertEqual(evaluate(QUESTIONNAIRE, "1m_5m", "mas_5", answers(k1=k1)).suggested_role, role)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from __future__ import annotations
 from sqlalchemy import select, update
 
 from optimizacion_portafolios.profiling import ProfileResult
+from optimizacion_portafolios.profiling.questionnaire import CAPITAL_AMOUNT_FIELD
 from optimizacion_portafolios.storage import db
 from optimizacion_portafolios.storage.models import Profile, ProfileDraft
 
@@ -47,7 +48,9 @@ def list_profiles(user_id: int | str) -> list[Profile]:
     )
 
 
-def save_profile(user_id: int | str, result: ProfileResult, *, delete_draft: bool = True) -> Profile:
+def save_profile(
+    user_id: int | str, result: ProfileResult, *, delete_draft: bool = True, capital_amount: int | None = None
+) -> Profile:
     """Insert ``result`` as the user's current profile (one transaction, then commit)."""
     user_id = int(user_id)
     try:
@@ -61,7 +64,7 @@ def save_profile(user_id: int | str, result: ProfileResult, *, delete_draft: boo
             version_cuestionario=result.version,
             capital_rango=result.capital,
             horizonte=result.horizon,
-            respuestas=dict(result.answers),
+            respuestas={**result.answers, **({CAPITAL_AMOUNT_FIELD: capital_amount} if capital_amount else {})},
             puntaje_tolerancia=result.scores[TOLERANCE_BLOCK],
             puntaje_capacidad=result.scores[CAPACITY_BLOCK],
             nivel_tolerancia=result.block_levels[TOLERANCE_BLOCK],

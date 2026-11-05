@@ -16,11 +16,25 @@
   </fieldset>
 {% endmacro %}
 
+{% macro amount_field(name, legend, value, invalid=False, help=None) %}
+  <div class="form-field">
+    <label class="field-label" for="campo-{{ name }}">{{ legend }}</label>
+    {% if help %}<p class="help-text" id="ayuda-{{ name }}">{{ help }}</p>{% endif %}
+    <input id="campo-{{ name }}" name="{{ name }}" type="text" inputmode="numeric" autocomplete="off" value="{{ value if value is not none else '' }}"{% if help %} aria-describedby="ayuda-{{ name }}"{% endif %}{% if invalid %} aria-invalid="true"{% endif %}>
+    {% if invalid %}<p class="field-error">Escribe un monto mayor que cero.</p>{% endif %}
+  </div>
+{% endmacro %}
+
 {% macro profile_summary(view) %}
   <dl class="metric-list">
     <div><dt>Perfil final</dt><dd>{{ view.final_label }}</dd></div>
-    <div><dt>Tolerancia al riesgo</dt><dd>{{ view.tolerance[1] }} · {{ view.tolerance[0] }} de 4</dd></div>
-    <div><dt>Capacidad de asumir pérdidas</dt><dd>{{ view.capacity[1] }} · {{ view.capacity[0] }} de 4</dd></div>
+    {% if view.current_scale %}
+      <div><dt>Puntaje de riesgo</dt><dd>{{ view.tolerance[0] }} de {{ view.score_max }}</dd></div>
+      <div><dt>Fondo de emergencia</dt><dd>{{ view.emergency_fund }}</dd></div>
+    {% else %}
+      <div><dt>Tolerancia al riesgo</dt><dd>{{ view.tolerance[1] }} · {{ view.tolerance[0] }} de {{ view.score_max }}</dd></div>
+      <div><dt>Capacidad de asumir pérdidas</dt><dd>{{ view.capacity[1] }} · {{ view.capacity[0] }} de {{ view.score_max }}</dd></div>
+    {% endif %}
     <div><dt>Horizonte</dt><dd>{{ view.horizon[0] }} · {{ view.horizon[1] }}</dd></div>
     <div><dt>Capital disponible</dt><dd>{{ view.capital }}</dd></div>
     <div><dt>Fecha</dt><dd>{{ view.profile.fecha|datetime_short }}</dd></div>

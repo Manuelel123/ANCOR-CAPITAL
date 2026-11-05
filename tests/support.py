@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from optimizacion_portafolios.profiling import evaluate, load_questionnaire
+from optimizacion_portafolios.profiling.avisos import load_notices
 from optimizacion_portafolios.storage import db
 from optimizacion_portafolios.storage.profiles import get_current_profile, save_profile
 from optimizacion_portafolios.storage.users import create_user, get_user_by_email
@@ -40,13 +41,17 @@ def create_test_user(
     display_name: str | None = "Ana",
     profile: bool = True,
     verified: bool = True,
+    notice: bool = True,
+    intro: bool = True,
 ) -> str:
     """Add a local user straight to the database; return ``str(user.id)``.
 
     By default the user has already been profiled: a current risk profile
     (``TEST_PROFILE_ANSWERS``) and a confirmed role, so the tools are open.
     Pass ``profile=False`` for a brand-new user (no profile, unconfirmed role)
-    and ``verified=False`` for an account that has not proved its email yet.
+    ``verified=False`` for an account that has not proved its email yet and
+    ``notice=False`` for one that has not accepted the data notice and
+    ``intro=False`` for one that has not seen the introduction.
     """
     if role_confirmed is None:
         role_confirmed = profile
@@ -59,20 +64,21 @@ def create_test_user(
             )
             if verified:
                 user.email_verified_at = datetime.now(timezone.utc)
-                db.session.commit()
+            if notice:
+                user.datos_aceptados_at = datetime.now(timezone.utc)
+                user.datos_aviso_version = load_notices().version
+            if intro:
+                user.intro_vista_at = datetime.now(timezone.utc)
+            db.session.commit()
         if profile and get_current_profile(user.id) is None:
             add_test_profile(app, user.id)
         return str(user.id)
 
 
-# Complete answers of a "moderado" profile (limited by capacity), horizon over 3 years.
-TEST_PROFILE_CAPITAL = "5m_20m"
-TEST_PROFILE_HORIZON = "mas_3"
-TEST_PROFILE_ANSWERS = {
-    "p1": 3, "p2": 2, "p3": 3, "p4": 3, "p5": 2,
-    "p6": 2, "p7": 2, "p8": 3,
-    "k1": 3, "k2": 2,
-}
+# Complete answers of a "moderado" profile (6 of 9 points) with an emergency fund.
+TEST_PROFILE_CAPITAL = "5m_30m"
+TEST_PROFILE_HORIZON = "mas_5"
+TEST_PROFILE_ANSWERS = {"k1": 3, "broker": 1, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
 
 
 def add_test_profile(app, user_id, *, capital=TEST_PROFILE_CAPITAL, horizon=TEST_PROFILE_HORIZON, answers=None):

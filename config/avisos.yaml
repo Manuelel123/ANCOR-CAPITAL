@@ -1,0 +1,40 @@
+# Avisos que el usuario acepta antes de usar Ancor Capital (lo lee
+# optimizacion_portafolios.profiling.avisos).
+#
+# Si cambia el texto del aviso, sube `version`: se le vuelve a pedir la
+# aceptación a todos los usuarios.
+version: 1
+
+# PENDIENTE: revisión legal (Ley 1581 de 2012)
+# Este texto es un borrador. Los derechos siguen el artículo 8 de la ley; falta la
+# revisión del abogado.
+# `pendiente_revision: true` muestra en la pantalla que es un borrador; ponlo en
+# false solo cuando el texto esté aprobado.
+pendiente_revision: true
+
+aviso_datos:
+  titulo: Tratamiento de tus datos
+  autorizacion: >-
+    Autorizo a Ancor Capital a tratar mis datos personales y de perfil (correo,
+    respuestas del cuestionario, capital indicado y decisiones registradas) para:
+  usos:
+    - Armar mi perfil, mi plan y mi seguimiento.
+    - Analizarlos de forma agregada y anónima con fines estadísticos y comerciales.
+    - >-
+      Compartirlos con la entidad que yo elija, por ejemplo un broker, para que
+      me contacte o me ayude a abrir una cuenta.
+  derechos_titulo: Mis derechos
+  derechos:
+    - Conocer, actualizar y corregir mis datos.
+    - Pedir prueba de esta autorización.
+    - Saber cómo se han usado mis datos.
+    - Revocar esta autorización o pedir que eliminen mis datos, si no hay un deber legal o contractual de conservarlos.
+    - Consultar mis datos gratis.
+    - Presentar quejas ante la Superintendencia de Industria y Comercio.
+  responsable: 'Responsable del tratamiento: Ancor Capital.'
+  contacto: 'Para ejercer estos derechos, escribe a ancorcapital@gmail.com.'
+  casilla: Leí el aviso y autorizo el tratamiento de mis datos.
+
+aviso_legal: >-
+  Ancor Capital es educación financiera; las opciones que ves son ejemplos según tus
+  respuestas y la decisión es tuya.

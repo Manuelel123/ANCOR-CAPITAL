@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "macros/learning.html" import educational_notice %}
+{% block title %}{{ notice.title }}{% endblock %}
+{% block content %}
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Antes de empezar</p>
+      <h1>{{ notice.title }}</h1>
+      <p class="lead">{{ notice.legal_notice }}</p>
+    </div>
+  </header>
+  {{ educational_notice(always=True) }}
+
+  <section class="card" aria-labelledby="aviso-titulo">
+    <header class="card__header">
+      <div>
+        <h2 class="card__title" id="aviso-titulo">Autorización</h2>
+        {% if notice.pending_review %}<p class="card__subtitle"><span class="badge badge--neutral">Borrador pendiente de revisión legal</span></p>{% endif %}
+      </div>
+    </header>
+    <form method="post" action="{{ url_for('onboarding.data_notice') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="card__body form-stack">
+        <p>{{ notice.authorization }}</p>
+        <ol>
+          {% for use in notice.uses %}<li>{{ use }}</li>{% endfor %}
+        </ol>
+        <p><strong>{{ notice.rights_title }}</strong></p>
+        <ul>
+          {% for right in notice.rights %}<li>{{ right }}</li>{% endfor %}
+        </ul>
+        <p>{{ notice.controller }} {{ notice.contact }}</p>
+        <label class="inline-check"><input type="checkbox" name="acepto" value="1" required> <span>{{ notice.checkbox }}</span></label>
+      </div>
+      <div class="card__footer"><button class="button button-primary" type="submit">Aceptar y continuar</button></div>
+    </form>
+  </section>
+{% endblock %}

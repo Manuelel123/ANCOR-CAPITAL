@@ -6,10 +6,10 @@
     <div>
       <p class="eyebrow">Seguimiento</p>
       <h1>Mis portafolios</h1>
-      <p class="lead">Portafolios que fijaste como óptimos desde HRP o Black-Litterman y que se monitorean desde la fecha de fijación.</p>
+      <p class="lead">Portafolios que fijaste como óptimos desde {{ 'HRP o Black-Litterman' if can_open('black_litterman.black_litterman') else 'HRP' }} y que se monitorean desde la fecha de fijación.</p>
     </div>
     <div class="page-header__actions">
-      <a class="button button-secondary" href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a>
+      {% if can_open('black_litterman.black_litterman') %}<a class="button button-secondary" href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a>{% endif %}
       <a class="button button-primary" href="{{ url_for('hrp.hrp') }}">Optimizar con HRP</a>
     </div>
   </header>
@@ -33,6 +33,38 @@
             <dl class="account-metrics">
               <div><dt>Capital inicial</dt><dd>{{ money(portfolio.initial_capital) }}</dd></div>
             </dl>
+            {% if can('administer_portfolios') %}
+              <details>
+                <summary>Administrar</summary>
+                <form method="post" action="{{ url_for('portfolios.rename', portfolio_id=portfolio.id) }}" class="form-stack">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <div class="form-field">
+                    <label for="nombre-{{ portfolio.id }}">Nombre</label>
+                    <input id="nombre-{{ portfolio.id }}" name="name" value="{{ portfolio.name }}" maxlength="120" required>
+                  </div>
+                  <button class="button button-secondary button-sm" type="submit">Guardar nombre</button>
+                </form>
+                <form method="post" action="{{ url_for('portfolios.visibility', portfolio_id=portfolio.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="visible" value="{{ '0' if portfolio.visible else '1' }}">
+                  <button class="button button-secondary button-sm" type="submit">{{ 'Dejar de mostrar a los usuarios' if portfolio.visible else 'Mostrar a los usuarios' }}</button>
+                </form>
+                {% if portfolio.status == 'active' %}
+                  <form method="post" action="{{ url_for('portfolios.archive', portfolio_id=portfolio.id) }}" data-confirm="¿Liquidar este portafolio? Dejará de seguirse y conservará su historial.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="button button-secondary button-sm" type="submit">Liquidar portafolio</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('portfolios.delete', portfolio_id=portfolio.id) }}" class="form-stack" data-confirm="¿Eliminar este portafolio para siempre? Esta acción no se puede deshacer.">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <div class="form-field">
+                    <label for="eliminar-{{ portfolio.id }}">Para eliminarlo, escribe su nombre exacto</label>
+                    <input id="eliminar-{{ portfolio.id }}" name="confirmacion" autocomplete="off" required>
+                  </div>
+                  <button class="button button-danger button-sm" type="submit">Eliminar portafolio</button>
+                </form>
+              </details>
+            {% endif %}
           </div>
         </article>
       {% endfor %}
@@ -41,7 +73,7 @@
     <div class="empty-state">
       <p class="empty-state__title">Aún no tienes portafolios en seguimiento</p>
       {% if can('fix_portfolio') %}
-      <p>Calcula un portafolio en <a href="{{ url_for('hrp.hrp') }}">HRP</a> o <a href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a> y usa «Establecer como portafolio óptimo» en el resultado.</p>
+      <p>Calcula un portafolio en <a href="{{ url_for('hrp.hrp') }}">HRP</a>{% if can_open('black_litterman.black_litterman') %} o <a href="{{ url_for('black_litterman.black_litterman') }}">Black-Litterman</a>{% endif %} y usa «Establecer como portafolio óptimo» en el resultado.</p>
       {% else %}
       <p>Como novato ves tus portafolios en solo lectura. Fijar un portafolio para seguirlo está disponible con el rol inversionista (puedes cambiarlo en <a href="{{ url_for('profile.mine') }}">Mi perfil</a>).</p>
       {% endif %}

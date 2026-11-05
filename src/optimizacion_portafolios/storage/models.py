@@ -61,6 +61,10 @@ class User(UserMixin, db.Model):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Set when the owner proves the email (verification or reset code).
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Data notice: when it was accepted and which version (config/avisos.yaml).
+    datos_aceptados_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    datos_aviso_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    intro_vista_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     @property
     def name(self) -> str:
@@ -158,6 +162,8 @@ class Portfolio(db.Model):
     tracking_start: Mapped[date] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # A gestor's portfolio shown, as a summary, on the home page of other users.
+    visible_usuarios: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     versions: Mapped[list[PortfolioVersion]] = relationship(
         back_populates="portfolio",

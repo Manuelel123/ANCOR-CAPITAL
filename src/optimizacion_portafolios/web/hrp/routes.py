@@ -6,6 +6,7 @@ from io import BytesIO
 
 import numpy as np
 from flask import flash, render_template, request, send_file
+from flask_login import current_user
 
 from optimizacion_portafolios.web.common.notice import with_notice_html
 
@@ -16,7 +17,9 @@ from optimizacion_portafolios.data.catalogs import (
     BENCHMARKS,
     UNIVERSOS_HRP,
 )
+from optimizacion_portafolios.storage.profiles import get_current_profile
 from optimizacion_portafolios.web.account.hooks import record_backtest
+from optimizacion_portafolios.web.guia.threshold import access_view, optimization_access, optimization_text
 from optimizacion_portafolios.web.auth.permissions import can
 from optimizacion_portafolios.web.common import guided
 from optimizacion_portafolios.web.decisions import log as decision_log
@@ -160,6 +163,9 @@ def _backtest_config() -> BacktestConfig | None:
 
 def _guided_hrp():
     """HRP for novato / inversionista: predefined universe, fixed inputs."""
+    access = optimization_access(get_current_profile(current_user.id))
+    if not access.unlocked:
+        return render_template("guia/locked.html", view=access_view(access))
     universes = guided.GUIDED_HRP_UNIVERSES
     universe_name, available, selected = guided.guided_selection(universes)
     start_date = guided.guided_start()
@@ -170,6 +176,8 @@ def _guided_hrp():
             max_weight = guided.guided_max_weight()
             if len(selected) < 2:
                 raise ValueError("Deja al menos dos activos para calcular HRP.")
+            if universe_name == guided.OWN_UNIVERSE and len(selected) > guided.OWN_UNIVERSE_MAX_ASSETS:
+                raise ValueError(f"Elige como máximo {guided.OWN_UNIVERSE_MAX_ASSETS} activos.")
             bounds = WeightBounds(max_weight=max_weight / 100)
             try:
                 result = run_hrp(selected, guided.GUIDED_BENCHMARK, start_date, bounds, _ASSET_LABELS)
@@ -202,11 +210,12 @@ def _guided_hrp():
     labels = guided.asset_labels(universes[universe_name])
     return render_template(
         "hrp/guided.html",
+        cost_note=optimization_text()["nota_activos"],
         universes=universes,
         universe_names=list(universes),
         universe_name=universe_name,
         universe_descriptions=guided.UNIVERSE_DESCRIPTIONS,
-        universes_payload=universes_payload(universes),
+        universes_payload=universes_payload(universes, guided.default_universe_selection),
         available_tickers=available,
         selected_tickers=selected,
         asset_labels=labels,

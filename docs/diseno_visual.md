@@ -1,6 +1,6 @@
-# Sistema de diseño · Atlas · Portfolio Lab — "Instrumento de precisión"
+# Sistema de diseño · Ancor Capital — "Instrumento de precisión"
 
-Interfaz clara y neutra (grises pizarra fríos) con UN acento índigo eléctrico; el color con significado se reserva para los datos (series, verde/rojo ganancia/pérdida, escala de correlación). Modo claro por defecto + modo oscuro opcional (interruptor en la navbar, persistido en localStorage; también respeta prefers-color-scheme).
+Interfaz clara y neutra con la identidad de Ancor Capital (azul marino #0b1f4b y un acento azul #1f6fd6, derivado del azul del logo #2f7bd9 para que el texto blanco cumpla contraste); el color con significado se reserva para los datos (series, verde/rojo ganancia/pérdida, escala de correlación). Modo claro por defecto + modo oscuro opcional (interruptor en la navbar, persistido en localStorage; también respeta prefers-color-scheme).
 Referencias: Stripe Dashboard (jerarquía sobria, tarjetas blancas borde 1px, KPIs grandes), Linear (índigo, foco cuidado, transiciones 150ms), Koyfin/TradingView (tablas densas tabulares, crosshair, grid casi invisible), Vercel/Geist (bordes > sombras), Robinhood (verde/rojo solo para dirección).
 
 Hoy la identidad navy+dorado está hardcodeada en base.html (theme-color #0b1f3a, favicon y logo SVG con #13294b/#c19a5b, carga Playfair Display), index.html (SVG hero con #c19a5b/#8e9bb0) y charts.py (SERIES_COLORS, CORRELATION_CMAP). Hay que retirarla de todos esos sitios.
@@ -10,11 +10,11 @@ Clases en uso a conservar (re-estilizar): .panel .content-grid .result-column .r
 ```css
 :root{
   color-scheme: light;
-  --bg:#f7f8fa; --surface-1:#ffffff; --surface-2:#f1f3f6; --surface-3:#e8ebf0; --surface-inverse:#0f172a;
+  --bg:#f7f8fa; --surface-1:#ffffff; --surface-2:#f1f3f6; --surface-3:#e8ebf0; --surface-inverse:#0b1f4b;
   --border:#e3e7ed; --border-strong:#cfd5de; --border-input:#8b95a7;
-  --text-1:#0f172a; --text-2:#475569; --text-3:#5f6b7e; --text-disabled:#9aa3b2; --text-on-accent:#ffffff;
-  --accent:#4f46e5; --accent-hover:#4338ca; --accent-active:#3730a3; --accent-subtle:#eef2ff; --accent-border:#c7d2fe;
-  --focus-ring:0 0 0 3px rgba(79,70,229,.35);
+  --text-1:#0b1f4b; --text-2:#475569; --text-3:#5f6b7e; --text-disabled:#9aa3b2; --text-on-accent:#ffffff;
+  --accent:#1f6fd6; --accent-hover:#1a5cb4; --accent-active:#0b1f4b; --accent-subtle:#eaf2fd; --accent-border:#bcd6f7;
+  --focus-ring:0 0 0 3px rgba(47,123,217,.35);
   --success:#047857; --success-bg:#ecfdf5; --success-border:#a7f3d0;
   --warning:#b45309; --warning-bg:#fffbeb; --warning-border:#fde68a;
   --danger:#b91c1c;  --danger-bg:#fef2f2;  --danger-border:#fecaca;
@@ -26,11 +26,11 @@ Clases en uso a conservar (re-estilizar): .panel .content-grid .result-column .r
 ```css
 [data-theme="dark"]{
   color-scheme: dark;
-  --bg:#0b0d12; --surface-1:#12151c; --surface-2:#181c25; --surface-3:#212632; --surface-inverse:#e6e9ef;
-  --border:#232834; --border-strong:#2f3542; --border-input:#5c6578;
-  --text-1:#e6e9ef; --text-2:#a3abb9; --text-3:#8a93a3; --text-disabled:#5c6578; --text-on-accent:#0b0d12;
-  --accent:#818cf8; --accent-hover:#a5b4fc; --accent-active:#c7d2fe; --accent-subtle:rgba(129,140,248,.14); --accent-border:rgba(129,140,248,.4);
-  --focus-ring:0 0 0 3px rgba(129,140,248,.45);
+  --bg:#081226; --surface-1:#0f1c36; --surface-2:#15243f; --surface-3:#1d2e4d; --surface-inverse:#e6e9ef;
+  --border:#22324f; --border-strong:#2f4163; --border-input:#5c6578;
+  --text-1:#e6e9ef; --text-2:#a3abb9; --text-3:#8a93a3; --text-disabled:#5c6578; --text-on-accent:#081226;
+  --accent:#7ab0f5; --accent-hover:#9cc4f8; --accent-active:#bdd8fb; --accent-subtle:rgba(122,176,245,.14); --accent-border:rgba(129,140,248,.4);
+  --focus-ring:0 0 0 3px rgba(122,176,245,.45);
   --success:#34d399; --success-bg:rgba(52,211,153,.12); --warning:#fbbf24; --warning-bg:rgba(251,191,36,.12);
   --danger:#f87171; --danger-bg:rgba(248,113,113,.12); --info:#38bdf8; --info-bg:rgba(56,189,248,.12);
   --positive:#34d399; --negative:#f87171; --positive-chart:#22c55e; --negative-chart:#ef4444;
@@ -69,7 +69,7 @@ Transiciones: --ease:cubic-bezier(.2,.8,.2,1); --t-fast:120ms; --t-base:180ms; -
 Layout: --container:1280px; --sidebar:340px; --nav-h:60px.
 
 ## Componentes
-- **Navbar**: sticky 60px, fondo color-mix(in srgb,var(--surface-1) 85%,transparent) + backdrop-filter blur(12px), borde inferior. Logo: monograma "A" en cuadrado 28px radio 8 fondo --accent trazo blanco + "Atlas" (Inter Tight 600) + "Portfolio Lab" (--text-3); mismo SVG para favicon; theme-color #4f46e5. Enlaces 14px/500 --text-2, padding 8×12 radio 6; hover --surface-3/--text-1; activo --text-1 + barra inferior 2px --accent + aria-current="page". Derecha: píldora "● Tiingo · Yahoo" (punto 6px --success, 12px) + botón de tema (icono 36px). Móvil <768: menú <details> o pestañas con scroll horizontal.
+- **Navbar**: sticky 60px, fondo color-mix(in srgb,var(--surface-1) 85%,transparent) + backdrop-filter blur(12px), borde inferior. Logo: monograma "A" en cuadrado 28px radio 8 fondo --accent trazo blanco + "Ancor Capital" (Inter Tight 600) + "Portfolio Lab" (--text-3); mismo SVG para favicon; theme-color #4f46e5. Enlaces 14px/500 --text-2, padding 8×12 radio 6; hover --surface-3/--text-1; activo --text-1 + barra inferior 2px --accent + aria-current="page". Derecha: píldora "● Tiingo · Yahoo" (punto 6px --success, 12px) + botón de tema (icono 36px). Móvil <768: menú <details> o pestañas con scroll horizontal.
 - **Encabezado de página**: eyebrow 12px/600/mayúsculas --accent ("Optimización · Riesgo jerárquico"), h1 28px Inter Tight 700 tracking −0.02em, descripción --text-2 máx 65ch; acciones a la derecha opcionales; sin tarjeta; margen inferior 24px.
 - **Tarjetas**: --surface-1, borde 1px --border, radio 10–14, --shadow-xs, padding 24. Cabecera: título 18px/600 + subtítulo 13px --text-3 + acciones a la derecha (botón fantasma). chart-card dentro de result-panel: planas (separador superior), sin tarjeta-en-tarjeta. Clicables (módulos inicio): hover borde --border-strong, --shadow-sm, translateY(-1px), flecha +2px; focus-visible anillo.
 - **KPI .metric-card**: grid repeat(auto-fit,minmax(180px,1fr)) gap 12. Etiqueta 12px/500 --text-3 (+ "?" tooltip); cifra 28px (36 destacada) Inter Tight 600 tabular --text-1 lh 1.15, unidad al 60% en --text-3; línea de contexto 12px --text-3; delta opcional píldora (▲ verde / ▼ rojo, flecha siempre). Fila principal + fila de mini-KPIs (cifra 18px) para lo secundario.

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "macros/learning.html" import educational_notice %}
+{% block title %}Optimización de portafolios{% endblock %}
+{% block content %}
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Optimización de portafolios</p>
+      <h1>{{ view.title }}</h1>
+      <p class="lead">{{ view.reason }}</p>
+    </div>
+  </header>
+  {{ educational_notice(always=True) }}
+
+  <section class="card account-section" aria-labelledby="estado-titulo">
+    <header class="card__header"><div><h2 class="card__title" id="estado-titulo">Tu situación</h2><p class="card__subtitle">{{ view.since }}</p></div></header>
+    {% if view.needs_update %}
+      <div class="card__body"><p>Para saber si ya la tienes habilitada necesitamos el monto exacto de tu capital. Actualízalo repitiendo el cuestionario.</p></div>
+    {% else %}
+      <dl class="metric-list">
+        {% if view.amount %}<div><dt>Tu capital</dt><dd>{{ view.amount }}</dd></div>{% endif %}
+        <div><dt>Te faltan</dt><dd>US${{ view.missing_usd }}</dd></div>
+      </dl>
+    {% endif %}
+    <div class="card__footer">
+      <a class="button button-primary" href="{{ url_for('guia.options') }}">Ver opciones para tu perfil</a>
+      <a class="button button-secondary" href="{{ url_for('profile.mine') }}">Actualizar mi capital</a>
+    </div>
+  </section>
+{% endblock %}

@@ -3,13 +3,15 @@
 ``init_app`` wires three things:
 
 - the access check ``require_current_profile`` (``web.auth.guard``): a
-  signed-in user without a current profile is sent to the questionnaire, and
-  one whose role is still unconfirmed (and is not ``gestor``) to the result
-  page to confirm it. The profiling pages themselves (``profile.*``) are
-  exempt; sign-out, static files and the home page never reach the checks.
+  signed-in user who has not accepted the current data notice is sent to it,
+  then to the introduction the first time, and one without a current profile
+  to the questionnaire. The ``gestor`` uses the original app: none of them.
+  The profiling pages (``profile.*``) and the broker guide are exempt from the
+  questionnaire; sign-out, static files and the home page never reach the
+  checks.
 - an after-sign-in hook (``web.auth.session.register_after_login``) that loads
-  the saved profile into ``session["perfil"]`` and, when the profile or the
-  role is missing, redirects there instead of ``next``.
+  the saved profile into ``session["perfil"]`` and, when a step is pending,
+  redirects there instead of ``next``.
 - the ``current_profile`` template variable (the same summary).
 
 ``session["perfil"]`` is a small JSON-serializable summary of the current
@@ -23,6 +25,7 @@ from flask import Flask, current_app, flash, jsonify, redirect, session, url_for
 from flask_login import current_user
 
 from optimizacion_portafolios.profiling import Questionnaire, QuestionnaireError, load_questionnaire
+from optimizacion_portafolios.profiling.avisos import DataNotice, load_notices
 from optimizacion_portafolios.storage.models import Profile, User
 from optimizacion_portafolios.storage.profiles import get_current_profile, is_current_profile
 from optimizacion_portafolios.web.auth import guard
@@ -32,13 +35,29 @@ from optimizacion_portafolios.web.auth.session import register_after_login, want
 PROFILE_SESSION_KEY = "perfil"
 PROFILE_ENDPOINT_PREFIX = "profile."
 QUESTIONNAIRE_MESSAGE = "Antes de usar las herramientas, completa tu perfil de riesgo."
-ROLE_MESSAGE = "Confirma cómo quieres usar Atlas para continuar."
+DATA_NOTICE_ENDPOINT = "onboarding.data_notice"
+DATA_NOTICE_MESSAGE = "Antes de continuar, revisa y acepta el aviso de tratamiento de datos."
+INTRODUCTION_ENDPOINT = "onboarding.introduction"
+GUIDE_ENDPOINT = "guia.interactive_brokers"
 _EXTENSION_KEY = "questionnaire_path"
+_NOTICES_KEY = "avisos_path"
 
 
 def get_questionnaire() -> Questionnaire:
     """The questionnaire of this app (reloaded when the YAML file changes)."""
     return load_questionnaire(current_app.extensions.get(_EXTENSION_KEY))
+
+
+def get_data_notice() -> DataNotice:
+    """The data notice of this app (reloaded when the YAML file changes)."""
+    return load_notices(current_app.extensions.get(_NOTICES_KEY))
+
+
+def needs_data_notice(user: User) -> bool:
+    """True until ``user`` accepts the current version (the gestor never sees it)."""
+    if user.role == GESTOR_ROLE:
+        return False
+    return user.datos_aceptados_at is None or user.datos_aviso_version != get_data_notice().version
 
 
 def _label(questionnaire: Questionnaire | None, level_id: str) -> str:
@@ -109,8 +128,13 @@ def current_profile() -> dict | None:
     return session_profile(current_user)
 
 
-def needs_role_confirmation(user: User) -> bool:
-    return user.role != GESTOR_ROLE and not user.role_confirmed
+def pending_onboarding_step(user: User) -> str | None:
+    """Data notice, then the introduction once (neither for the gestor)."""
+    if needs_data_notice(user):
+        return DATA_NOTICE_ENDPOINT
+    if user.intro_vista_at is None and user.role != GESTOR_ROLE:
+        return INTRODUCTION_ENDPOINT
+    return None
 
 
 def pending_profile_step(user: User) -> str | None:
@@ -118,23 +142,28 @@ def pending_profile_step(user: User) -> str | None:
 
     The gestor uses the original app ("modo original"): no questionnaire.
     """
+    step = pending_onboarding_step(user)
+    if step is not None:
+        return step
     if user.role == GESTOR_ROLE:
         return None
     if session_profile(user) is None:
         return "profile.questionnaire"
-    if needs_role_confirmation(user):
-        return "profile.result"
     return None
 
 
 def require_current_profile(endpoint: str):
-    """Access check: no tool without a current profile and a confirmed role."""
-    if endpoint.startswith(PROFILE_ENDPOINT_PREFIX):
+    """Access check: no page without the notice, no tool without a profile."""
+    if endpoint == DATA_NOTICE_ENDPOINT:
         return None
     step = pending_profile_step(current_user)
-    if step is None:
+    if step is None or (endpoint == INTRODUCTION_ENDPOINT and step != DATA_NOTICE_ENDPOINT):
         return None
-    message = QUESTIONNAIRE_MESSAGE if step == "profile.questionnaire" else ROLE_MESSAGE
+    if step == INTRODUCTION_ENDPOINT:
+        return redirect(url_for(step))
+    if step != DATA_NOTICE_ENDPOINT and (endpoint.startswith(PROFILE_ENDPOINT_PREFIX) or endpoint == GUIDE_ENDPOINT):
+        return None
+    message = DATA_NOTICE_MESSAGE if step == DATA_NOTICE_ENDPOINT else QUESTIONNAIRE_MESSAGE
     if wants_json():
         return jsonify({"error": message}), 403
     flash(message, "info")
@@ -152,6 +181,8 @@ def init_app(app: Flask) -> None:
     app.extensions[_EXTENSION_KEY] = app.config.get("QUESTIONNAIRE_PATH")
     # Fail at start-up (with the validation message) if the YAML is malformed.
     load_questionnaire(app.extensions[_EXTENSION_KEY])
+    app.extensions[_NOTICES_KEY] = app.config.get("AVISOS_PATH")
+    load_notices(app.extensions[_NOTICES_KEY])
     guard.register_access_check(app, require_current_profile)
     register_after_login(app, after_login)
 

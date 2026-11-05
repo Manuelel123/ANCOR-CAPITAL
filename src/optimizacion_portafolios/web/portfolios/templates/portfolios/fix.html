@@ -16,6 +16,10 @@
       <div class="card__body form-stack">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="snapshot" value="{{ snapshot }}">
+        {% if form.copied_from %}
+          <p class="notice notice--warning" role="note">Es una copia de «{{ form.copied_from }}» con sus pesos actuales. No cambia si el gestor modifica el suyo.</p>
+          <label class="inline-check"><input type="checkbox" name="entiendo" value="1" required> <span>Entiendo que es una copia educativa y que la decisión es mía.</span></label>
+        {% endif %}
         <div class="form-field">
           <label for="name">Nombre</label>
           <input id="name" name="name" type="text" maxlength="120" required value="{{ values.name }}">

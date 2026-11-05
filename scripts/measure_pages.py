@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CSRF_PATTERN = re.compile(rb'name="csrf_token"\s+value="([^"]+)"')
 ERROR_FLASH = re.compile(rb'class="flash flash-error"[\s\S]*?class="flash__message">([^<]*)<')
 PASSWORD = "medicion-1"
-PROFILE_ANSWERS = {"p1": 3, "p2": 2, "p3": 3, "p4": 3, "p5": 2, "p6": 2, "p7": 2, "p8": 3, "k1": 3, "k2": 2}
+PROFILE_ANSWERS = {"k1": 3, "broker": 1, "aporte": 3, "p2": 2, "p1": 3, "p6": 1}
 USERS = {
     "novato": "novato@medicion.local",
     "inversionista": "inversionista@medicion.local",
@@ -108,7 +108,7 @@ def create_users(app) -> dict[str, str]:
     with app.app_context():
         for role, email in USERS.items():
             user = create_user(email, password_hash, display_name=role.title(), role=role, role_confirmed=True)
-            save_profile(user.id, evaluate(load_questionnaire(), "5m_20m", "mas_3", PROFILE_ANSWERS))
+            save_profile(user.id, evaluate(load_questionnaire(), "5m_30m", "mas_5", PROFILE_ANSWERS))
             ids[role] = str(user.id)
     return ids
 
@@ -165,9 +165,10 @@ def pages(portfolio_id: int) -> list[dict]:
         "backtest": "1",
         **BACKTEST_DEFAULTS,
     }
-    guided = {"action": "optimize", "universe": "Acciones y Bitcoin"}
+    universe = "Acciones y Bitcoin"
+    guided = {"action": "optimize", "universe": universe, "tickers": list(GUIDED_UNIVERSES[universe].values())}
     # inversionista may exclude assets, so its form posts the checked tickers.
-    compare_form = {**guided, "tickers": list(GUIDED_UNIVERSES[guided["universe"]].values()), "max_weight": "100"}
+    compare_form = {**guided, "max_weight": "100"}
     monitored = next(iter(PORTAFOLIOS_MONITOREO))
     market_form = {
         "action": "analyze",
@@ -181,9 +182,9 @@ def pages(portfolio_id: int) -> list[dict]:
         {"name": "HRP GET (novato)", "role": "novato", "method": "GET", "path": "/hrp"},
         {"name": "HRP POST guiado (novato)", "role": "novato", "method": "POST", "path": "/hrp", "form": guided},
         {"name": "HRP POST completo + backtest (gestor)", "role": "gestor", "method": "POST", "path": "/hrp", "form": hrp_full},
-        {"name": "Black-Litterman GET (novato)", "role": "novato", "method": "GET", "path": "/black-litterman"},
-        {"name": "Black-Litterman POST guiado (novato)", "role": "novato", "method": "POST", "path": "/black-litterman", "form": guided},
-        {"name": "Comparación POST (inversionista)", "role": "inversionista", "method": "POST", "path": "/comparar", "form": compare_form},
+        {"name": "Black-Litterman GET (gestor)", "role": "gestor", "method": "GET", "path": "/black-litterman"},
+        {"name": "Black-Litterman POST (gestor)", "role": "gestor", "method": "POST", "path": "/black-litterman", "form": guided},
+        {"name": "Comparación POST (gestor)", "role": "gestor", "method": "POST", "path": "/comparar", "form": compare_form},
         {"name": "Mercado GET (gestor)", "role": "gestor", "method": "GET", "path": "/monitoring"},
         {"name": "Mercado POST portafolio (gestor)", "role": "gestor", "method": "POST", "path": "/monitoring", "form": market_form},
         {"name": "Mis portafolios lista (gestor)", "role": "gestor", "method": "GET", "path": "/portafolios/"},

@@ -60,7 +60,7 @@ class WebInterfaceTests(WebTestCase):
         self.assertIn("data-theme-toggle", html)
         self.assertIn('localStorage.getItem("atlas-theme")', html)
         self.assertIn("atlas:themechange", html)
-        self.assertIn('<meta name="theme-color" content="#4f46e5">', html)
+        self.assertIn('<meta name="theme-color" content="#0b1f4b">', html)
         self.assertIn("Inter+Tight", html)
         self.assertIn('classList.add("js")', html)
         self.assertIn("js/forms.js", html)

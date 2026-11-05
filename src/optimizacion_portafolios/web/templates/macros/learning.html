@@ -1,9 +1,10 @@
 {# Educational pieces shared by every page with results. #}
 
 {# The mandatory notice: exact text, on every screen with results and on the portada. #}
-{# The gestor uses the original app ("modo original"), which had no such notice. #}
-{% macro educational_notice(extra=None) %}
-  {% if not original_mode() %}
+{# The gestor uses the original app ("modo original"), which had no such notice; #}
+{# ``always`` keeps it on pages that did not exist there (onboarding, guide). #}
+{% macro educational_notice(extra=None, always=False) %}
+  {% if always or not original_mode() %}
   <div class="notice notice--warning educational-notice" role="note">
     <p><strong>Información educativa. No es recomendación de inversión ni asesoría financiera.</strong>{% if extra %} {{ extra }}{% endif %}</p>
   </div>
